@@ -1,12 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 
-import '../../../../core/contants/colors.dart';
-import '../../../../core/contants/decorations.dart';
-import '../../../../core/contants/paddings.dart';
-import '../../../../core/contants/reusable_widgets.dart';
-import '../../../../core/contants/sizes.dart';
-import '../../../../core/contants/text_styles.dart';
+import '../../../../core/contants/constants.dart';
+import '../../../../core/localization/app_localizations.dart';
 import 'background_location_screen.dart';
 import 'get_notified_screen.dart';
 import 'home_screen.dart';
@@ -18,18 +14,20 @@ class LocationPermissionScreen extends StatefulWidget {
   State<LocationPermissionScreen> createState() => _LocationPermissionScreenState();
 }
 
-class _LocationPermissionScreenState extends State<LocationPermissionScreen> with WidgetsBindingObserver {
+class _LocationPermissionScreenState extends State<LocationPermissionScreen>
+    with WidgetsBindingObserver {
   LocationPermission? _permission;
   bool _locationServicesEnabled = false;
   bool _isRequesting = false;
   String? _errorMessage;
 
-  bool get _hasLocationPermission => _permission == LocationPermission.whileInUse || _permission == LocationPermission.always;
+  bool get _hasLocationPermission =>
+      _permission == LocationPermission.whileInUse || _permission == LocationPermission.always;
 
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addObserver(this);   // used to register this object as a lifecycle as a lifecycle observer
+    WidgetsBinding.instance.addObserver(this);
     _checkPermission();
   }
 
@@ -61,6 +59,7 @@ class _LocationPermissionScreenState extends State<LocationPermissionScreen> wit
   }
 
   Future<void> _requestLocationPermission() async {
+    final l10n = AppLocalizations.of(context);
     setState(() {
       _isRequesting = true;
       _errorMessage = null;
@@ -73,9 +72,7 @@ class _LocationPermissionScreenState extends State<LocationPermissionScreen> wit
         if (mounted) {
           setState(() {
             _locationServicesEnabled = false;
-            _errorMessage =
-                'Location services are turned off. Please enable '
-                'them in your device settings.';
+            _errorMessage = l10n.locationServicesOffError;
           });
         }
         return;
@@ -101,15 +98,11 @@ class _LocationPermissionScreenState extends State<LocationPermissionScreen> wit
 
       if (permission == LocationPermission.deniedForever) {
         setState(() {
-          _errorMessage =
-              'Location access was permanently denied. '
-              'Please enable it in app settings.';
+          _errorMessage = l10n.locationDeniedForeverError;
         });
       } else if (permission == LocationPermission.denied) {
         setState(() {
-          _errorMessage =
-              'Location access is needed to detect your arrival '
-              'at the office.';
+          _errorMessage = l10n.locationDeniedError;
         });
       }
     } catch (e, stackTrace) {
@@ -118,7 +111,7 @@ class _LocationPermissionScreenState extends State<LocationPermissionScreen> wit
 
       if (mounted) {
         setState(() {
-          _errorMessage = 'Location setup failed. Please try again.';
+          _errorMessage = l10n.locationSetupFailedError;
         });
       }
     } finally {
@@ -149,6 +142,7 @@ class _LocationPermissionScreenState extends State<LocationPermissionScreen> wit
   }
 
   void _showBackgroundInfo() {
+    final l10n = AppLocalizations.of(context);
     showModalBottomSheet<void>(
       context: context,
       backgroundColor: AppColors.panel,
@@ -165,35 +159,28 @@ class _LocationPermissionScreenState extends State<LocationPermissionScreen> wit
               children: [
                 const Icon(
                   Icons.location_searching_rounded,
-                  color: AppColors.cyan,
+                  color: AppColors.blue,
                   size: Sizes.iconXl,
                 ),
                 Sizes.gapH18,
-                const Text(
-                  'Why background location?',
+                Text(
+                  l10n.whyBackgroundLocationTitle,
                   style: TextStyles.titleLarge,
                 ),
                 Sizes.gapH12,
-                const Text(
-                  'OfficeCheck needs background location access '
-                  'to detect when you enter or leave the office '
-                  'while your phone is locked or the app is not open.',
+                Text(
+                  l10n.whyBackgroundLocationDesc1,
                   style: TextStyles.bodyMedium,
                 ),
                 Sizes.gapH12,
-                const Text(
-                  'Android handles this separately from foreground '
-                  'location access. We will guide you through the '
-                  'required settings in the next setup step.',
+                Text(
+                  l10n.whyBackgroundLocationDesc2,
                   style: TextStyles.bodyMedium,
                 ),
                 Sizes.gapH24,
-                SizedBox(
-                  width: double.infinity,
-                  child: FilledButton(
-                    onPressed: () => Navigator.pop(context),
-                    child: const Text('Got it'),
-                  ),
+                AppPrimaryButton(
+                  text: l10n.gotIt,
+                  onPressed: () => Navigator.pop(context),
                 ),
               ],
             ),
@@ -205,6 +192,22 @@ class _LocationPermissionScreenState extends State<LocationPermissionScreen> wit
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+
+    final buttonText = _hasLocationPermission && _locationServicesEnabled
+        ? l10n.locationAccessEnabled
+        : (_hasLocationPermission && !_locationServicesEnabled)
+        ? l10n.enableDeviceLocation
+        : _permission == LocationPermission.deniedForever
+        ? l10n.openAppSettings
+        : l10n.enableLocationAccess;
+
+    final preciseStatus = !_locationServicesEnabled
+        ? l10n.statusServicesOff
+        : _hasLocationPermission
+        ? l10n.statusGranted
+        : l10n.statusNeeded;
+
     return Scaffold(
       backgroundColor: AppColors.background,
       body: Stack(
@@ -213,16 +216,16 @@ class _LocationPermissionScreenState extends State<LocationPermissionScreen> wit
             top: -130,
             right: -110,
             child: AppGlowCircle(
-              size: 200,
-              color: AppColors.blue.withValues(alpha: 0.13),
+              size: 300,
+              color: AppColors.blue.withValues(alpha: 0.08),
             ),
           ),
           Positioned(
             bottom: 50,
             left: -150,
             child: AppGlowCircle(
-              size: 200,
-              color: AppColors.cyan.withValues(alpha: 0.07),
+              size: 300,
+              color: AppColors.cyan.withValues(alpha: 0.06),
             ),
           ),
           SafeArea(
@@ -234,56 +237,42 @@ class _LocationPermissionScreenState extends State<LocationPermissionScreen> wit
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
-                      _buildIllustration(),
-                      Sizes.gapH8,
+                      const PermissionHeroIllustration(
+                        centerIcon: Icons.location_on_rounded,
+                        badgeIcon: Icons.verified_user_rounded,
+                      ),
+                      Sizes.gapH20,
 
-                      const Text(
-                        'Stay in the loop.',
+                      Text(
+                        l10n.stayInTheLoop,
                         textAlign: TextAlign.center,
                         style: TextStyles.headline,
                       ),
-                      Sizes.gapH12,
-                      const Text(
-                        'Let OfficeCheck recognise your arrival '
-                        'and departure without keeping the app open.',
-                        textAlign: TextAlign.center,
-                        style: TextStyles.bodyLarge,
-                      ),
 
-                      Sizes.gapH30,
+                      Sizes.gapH20,
 
-                      _permissionRow(
+                      PermissionItemRow(
                         icon: Icons.my_location_rounded,
-                        title: 'Precise location',
-                        subtitle:
-                            'Check whether you are within 150 m '
-                            'of your office.',
-                        status: !_locationServicesEnabled
-                            ? 'Services off'
-                            : _hasLocationPermission
-                            ? 'Granted'
-                            : 'Needed',
-                        granted: _hasLocationPermission && _locationServicesEnabled,
+                        title: l10n.preciseLocationTitle,
+                        subtitle: l10n.preciseLocationSubtitle,
+                        isGranted: _hasLocationPermission && _locationServicesEnabled,
+                        trailingText: preciseStatus,
                       ),
                       Sizes.gapH12,
-                      _permissionRow(
+                      PermissionItemRow(
                         icon: Icons.nightlight_round,
-                        title: 'Background access',
-                        subtitle:
-                            'Detect arrival and departure while '
-                            'your phone is locked.',
-                        status: 'Setup next',
-                        granted: false,
+                        title: l10n.backgroundAccessTitle,
+                        subtitle: l10n.backgroundAccessSubtitle,
+                        isGranted: false,
+                        trailingText: l10n.statusSetupNext,
                       ),
                       Sizes.gapH12,
-                      _permissionRow(
+                      PermissionItemRow(
                         icon: Icons.notifications_active_outlined,
-                        title: 'Notifications',
-                        subtitle:
-                            'Receive a prompt to confirm '
-                            'Check In or Check Out.',
-                        status: 'Setup next',
-                        granted: false,
+                        title: l10n.notificationsTitle,
+                        subtitle: l10n.notificationsSubtitle,
+                        isGranted: false,
+                        trailingText: l10n.statusSetupNext,
                       ),
 
                       if (_errorMessage != null) ...[
@@ -293,94 +282,57 @@ class _LocationPermissionScreenState extends State<LocationPermissionScreen> wit
 
                       Sizes.gapH26,
 
-                      SizedBox(
-                        width: double.infinity,
-                        height: Sizes.buttonHeight,
-                        child: FilledButton(
-                          onPressed: _isRequesting
-                              ? null
-                              : (_hasLocationPermission && _locationServicesEnabled)
-                              ? () {
-                            Navigator.of(context).push(
-                              MaterialPageRoute<void>(
-                                builder: (_) => GetNotifiedScreen(
-                                  onContinue: () {
-                                    Navigator.of(context).push(
-                                      MaterialPageRoute<void>(
-                                        builder: (_) => BackgroundLocationScreen(
-                                          onContinue: () {
-                                            Navigator.of(context).pushReplacement(
-                                              MaterialPageRoute<void>(
-                                                builder: (_) => const HomeScreen(),
-                                              ),
-                                            );
-                                          },
-                                        ),
+                      AppPrimaryButton(
+                        text: buttonText,
+                        isLoading: _isRequesting,
+                        icon: _hasLocationPermission && _locationServicesEnabled
+                            ? Icons.check_circle_outline
+                            : (_hasLocationPermission && !_locationServicesEnabled)
+                            ? Icons.location_off_rounded
+                            : _permission == LocationPermission.deniedForever
+                            ? Icons.settings_outlined
+                            : Icons.location_on_rounded,
+                        onPressed: (_hasLocationPermission && _locationServicesEnabled)
+                            ? () {
+                          Navigator.of(context).push(
+                            MaterialPageRoute<void>(
+                              builder: (_) => GetNotifiedScreen(
+                                onContinue: () {
+                                  Navigator.of(context).push(
+                                    MaterialPageRoute<void>(
+                                      builder: (_) => BackgroundLocationScreen(
+                                        onContinue: () {
+                                          Navigator.of(context).pushReplacement(
+                                            MaterialPageRoute<void>(
+                                              builder: (_) => const HomeScreen(),
+                                            ),
+                                          );
+                                        },
                                       ),
-                                    );
-                                  },
-                                ),
+                                    ),
+                                  );
+                                },
                               ),
-                            );
-                          }
-                              : _handleLocationButton,
-                          style: FilledButton.styleFrom(
-                            backgroundColor: AppColors.blue,
-                            disabledBackgroundColor: AppColors.blue.withValues(alpha: 0.45),
-                            foregroundColor: AppColors.white,
-                            shape: RoundedRectangleBorder(borderRadius: Sizes.radius16),
-                          ),
-                          child: _isRequesting
-                              ? const SizedBox(
-                                  width: 22,
-                                  height: 22,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                    color: AppColors.white,
-                                  ),
-                                )
-                              : Row(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    Icon(
-                                      _hasLocationPermission && _locationServicesEnabled
-                                          ? Icons.check_circle_outline
-                                          : (_hasLocationPermission && !_locationServicesEnabled)
-                                          ? Icons.location_off_rounded
-                                          : _permission == LocationPermission.deniedForever
-                                          ? Icons.settings_outlined
-                                          : Icons.location_on_rounded,
-                                    ),
-                                    Sizes.gapW10,
-                                    Text(
-                                      _hasLocationPermission && _locationServicesEnabled
-                                          ? 'Location Access Enabled'
-                                          : (_hasLocationPermission && !_locationServicesEnabled)
-                                          ? 'Enable Device Location'
-                                          : _permission == LocationPermission.deniedForever
-                                          ? 'Open App Settings'
-                                          : 'Enable Location Access',
-                                      style: TextStyles.button,
-                                    ),
-                                  ],
-                                ),
-                        ),
+                            ),
+                          );
+                        }
+                            : _handleLocationButton,
                       ),
 
                       Sizes.gapH16,
 
                       TextButton(
                         onPressed: _showBackgroundInfo,
-                        child: const Text(
-                          'Why do we need background access?',
+                        child: Text(
+                          l10n.whyBackgroundAccess,
                           style: TextStyles.cyanLink,
                         ),
                       ),
 
                       Sizes.gapH18,
 
-                      const Text(
-                        'YOUR LOCATION IS USED FOR WORKPLACE ATTENDANCE',
+                      Text(
+                        l10n.locationAttendanceNotice,
                         textAlign: TextAlign.center,
                         style: TextStyles.overline10,
                       ),
@@ -389,96 +341,6 @@ class _LocationPermissionScreenState extends State<LocationPermissionScreen> wit
                 ),
               ),
             ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildIllustration() {
-    return SizedBox(
-      width: 190,
-      height: 190,
-      child: Stack(
-        alignment: Alignment.center,
-        children: [
-          Container(
-            width: 154,
-            height: 154,
-            decoration: Decorations.concentricCircle(
-              borderColor: AppColors.blue.withValues(alpha: 0.2),
-            ),
-          ),
-          Container(
-            width: 125,
-            height: 125,
-            decoration: Decorations.concentricCircle(
-              borderColor: AppColors.cyan.withValues(alpha: 0.35),
-              fillColor: AppColors.blue.withValues(alpha: 0.07),
-            ),
-          ),
-          Container(
-            width: 68,
-            height: 68,
-            decoration: Decorations.roundedHeroIcon,
-            child: const Icon(
-              Icons.location_on_rounded,
-              color: AppColors.white,
-              size: Sizes.iconHero,
-            ),
-          ),
-          Positioned(
-            top: 18,
-            right: 25,
-            child: Container(
-              padding: AppPaddings.all8,
-              decoration: Decorations.floatingStatusBadge,
-              child: const Icon(
-                Icons.verified_user_rounded,
-                color: AppColors.cyan,
-                size: 21,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _permissionRow({
-    required IconData icon,
-    required String title,
-    required String subtitle,
-    required String status,
-    required bool granted,
-  }) {
-    return Container(
-      padding: AppPaddings.card,
-      decoration: Decorations.panelCard(),
-      child: Row(
-        children: [
-          Container(
-            width: 44,
-            height: 44,
-            decoration: Decorations.iconBox(),
-            child: Icon(icon, color: AppColors.cyan, size: 23),
-          ),
-          Sizes.gapW13,
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(title, style: TextStyles.itemTitle),
-                Sizes.gapH4,
-                Text(subtitle, style: TextStyles.bodySmall),
-              ],
-            ),
-          ),
-          Sizes.gapW8,
-          Icon(
-            granted ? Icons.check_circle : Icons.arrow_forward_ios_rounded,
-            color: granted ? AppColors.cyan : AppColors.muted,
-            size: granted ? 19 : 15,
           ),
         ],
       ),

@@ -1,38 +1,37 @@
 import 'package:flutter/material.dart';
 import 'colors.dart';
 
-/// Centralized application typography and text styles.
-/// Usable anywhere as [TextStyles.headline] or [AppTextStyles.headline].
+/// Centralized application typography and text styles for Light Theme.
 class TextStyles {
   TextStyles._();
 
-  /// Splash / Hero Large Title: 35pt bold, -1.2 letter spacing
+  /// Splash / Hero Large Title: 35pt bold
   static const TextStyle heroLarge = TextStyle(
     fontSize: 35,
     fontWeight: FontWeight.w700,
     letterSpacing: -1.2,
-    color: AppColors.white,
+    color: AppColors.textPrimary,
   );
 
-  /// Onboarding Screen Title: 30pt bold, -0.7 letter spacing
+  /// Onboarding Screen Title: 30pt bold
   static const TextStyle headline = TextStyle(
     fontSize: 30,
     fontWeight: FontWeight.w700,
     letterSpacing: -0.7,
-    color: AppColors.white,
+    color: AppColors.textPrimary,
   );
 
   /// Large Metric / Distance Counter: 36pt bold
   static const TextStyle metricLarge = TextStyle(
-    color: AppColors.white,
+    color: AppColors.textPrimary,
     fontSize: 36,
     fontWeight: FontWeight.w700,
     letterSpacing: -1,
   );
 
-  /// Screen Headline 29pt: 29pt bold, -0.6 letter spacing
+  /// Screen Headline 29pt: 29pt bold
   static const TextStyle headline29 = TextStyle(
-    color: AppColors.white,
+    color: AppColors.textPrimary,
     fontSize: 29,
     fontWeight: FontWeight.w700,
     letterSpacing: -0.6,
@@ -42,26 +41,26 @@ class TextStyles {
   static const TextStyle titleLarge = TextStyle(
     fontSize: 22,
     fontWeight: FontWeight.w700,
-    color: AppColors.white,
+    color: AppColors.textPrimary,
   );
 
   /// App Bar Title: 20pt bold
   static const TextStyle appBarTitle = TextStyle(
-    color: AppColors.white,
+    color: AppColors.textPrimary,
     fontSize: 20,
     fontWeight: FontWeight.w700,
   );
 
   /// Time display: 18pt bold
   static const TextStyle timeDisplay = TextStyle(
-    color: AppColors.white,
+    color: AppColors.textPrimary,
     fontSize: 18,
     fontWeight: FontWeight.w700,
   );
 
   /// Section Subtitle / Header: 17pt semi-bold
   static const TextStyle sectionTitle = TextStyle(
-    color: AppColors.white,
+    color: AppColors.textPrimary,
     fontSize: 17,
     fontWeight: FontWeight.w600,
   );
@@ -70,7 +69,7 @@ class TextStyles {
   static const TextStyle itemTitle = TextStyle(
     fontSize: 14,
     fontWeight: FontWeight.w600,
-    color: AppColors.white,
+    color: AppColors.textPrimary,
   );
 
   /// Body regular (large): 15pt
@@ -109,7 +108,7 @@ class TextStyles {
     color: AppColors.white,
   );
 
-  /// Small brand badge / category header: 11pt w600, 3 letter spacing
+  /// Small brand badge / category header: 11pt w600
   static const TextStyle brandLabel = TextStyle(
     color: AppColors.textMuted,
     fontSize: 11,
@@ -117,7 +116,7 @@ class TextStyles {
     fontWeight: FontWeight.w600,
   );
 
-  /// Category Header / Section Tag: 11pt bold, 1.3 letter spacing
+  /// Category Header / Section Tag: 11pt bold
   static const TextStyle sectionHeader = TextStyle(
     color: AppColors.muted,
     fontSize: 11,
@@ -125,13 +124,13 @@ class TextStyles {
     letterSpacing: 1.3,
   );
 
-  /// Cyan Action Link: 14pt cyan medium
+  /// Cyan / Primary Action Link: 14pt
   static const TextStyle cyanLink = TextStyle(
-    color: AppColors.cyan,
-    fontWeight: FontWeight.w500,
+    color: AppColors.blue,
+    fontWeight: FontWeight.w600,
   );
 
-  /// Bottom banner / overline: 9-10pt w600, uppercase
+  /// Bottom banner / overline: 9pt w600
   static const TextStyle overline = TextStyle(
     color: AppColors.textSubtle,
     fontSize: 9,

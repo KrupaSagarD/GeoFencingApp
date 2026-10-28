@@ -4,12 +4,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'core/contants/colors.dart';
+import 'core/localization/app_localizations.dart';
 import 'features/splash/presentation/views/location_permission_screen.dart';
 import 'features/splash/presentation/views/splash_screen.dart';
 
 void main() {
   runApp(
-    const ProviderScope(  // It makes Riverpod providers available
+    const ProviderScope(
       child: OfficeCheckApp(),
     ),
   );
@@ -23,10 +24,18 @@ class OfficeCheckApp extends StatelessWidget {
     return MaterialApp(
       title: 'OfficeCheck',
       debugShowCheckedModeBanner: false,
+      locale: const Locale('en'),
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
       theme: ThemeData(
         useMaterial3: true,
-        brightness: Brightness.dark,
+        brightness: Brightness.light,
         scaffoldBackgroundColor: AppColors.background,
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: AppColors.blue,
+          brightness: Brightness.light,
+          surface: AppColors.panel,
+        ),
       ),
       home: const SplashGate(),
     );

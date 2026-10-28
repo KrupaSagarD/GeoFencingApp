@@ -2,12 +2,11 @@ import 'package:flutter/material.dart';
 import 'colors.dart';
 import 'sizes.dart';
 
-/// Centralized application decorations.
-/// Usable anywhere as [Decorations.panelCard] or [AppDecorations.panelCard].
+/// Centralized application decorations - Light Theme.
 class Decorations {
   Decorations._();
 
-  /// Standard dark panel container decoration (used in rows, cards, containers).
+  /// Standard card container decoration (Light Theme).
   static BoxDecoration panelCard({
     BorderRadius? borderRadius,
     Color? borderColor,
@@ -18,46 +17,84 @@ class Decorations {
       border: Border.all(
         color: borderColor ?? AppColors.borderSubtle,
       ),
+      boxShadow: const [
+        BoxShadow(
+          color: AppColors.shadow,
+          blurRadius: 10,
+          offset: Offset(0, 3),
+        ),
+      ],
     );
   }
 
-  /// Dark panel container with 16 radius.
+  /// Light panel container with 16 radius.
   static final BoxDecoration panelCard16 = BoxDecoration(
     color: AppColors.panel,
     borderRadius: Sizes.radius16,
+    border: Border.all(color: AppColors.borderSubtle),
+    boxShadow: const [
+      BoxShadow(
+        color: AppColors.shadow,
+        blurRadius: 8,
+        offset: Offset(0, 2),
+      ),
+    ],
   );
 
-  /// Dark panel container with 18 radius.
+  /// Light panel container with 18 radius.
   static final BoxDecoration panelCard18 = BoxDecoration(
     color: AppColors.panel,
     borderRadius: Sizes.radius18,
+    border: Border.all(color: AppColors.borderSubtle),
+    boxShadow: const [
+      BoxShadow(
+        color: AppColors.shadow,
+        blurRadius: 10,
+        offset: Offset(0, 3),
+      ),
+    ],
   );
 
-  /// Dark panel container with 22 radius.
+  /// Light panel container with 22 radius.
   static final BoxDecoration panelCard22 = BoxDecoration(
     color: AppColors.panel,
     borderRadius: Sizes.radius20,
     border: Border.all(color: AppColors.borderSubtle),
+    boxShadow: const [
+      BoxShadow(
+        color: AppColors.shadow,
+        blurRadius: 12,
+        offset: Offset(0, 4),
+      ),
+    ],
   );
 
-  /// Attendance / Proximity gradient card.
+  /// Attendance / Proximity gradient card (Light Theme).
   static final BoxDecoration proximityCard = BoxDecoration(
     borderRadius: Sizes.radius24,
     gradient: const LinearGradient(
       begin: Alignment.topLeft,
       end: Alignment.bottomRight,
-      colors: [Color(0xFF14345A), Color(0xFF0D2038)],
+      colors: [Color(0xFFEFF6FF), Color(0xFFDBEAFE)],
     ),
-    border: Border.all(color: AppColors.blue.withValues(alpha: 0.35)),
+    border: Border.all(color: const Color(0xFFBFDBFE)),
+    boxShadow: const [
+      BoxShadow(
+        color: Color(0x152563EB),
+        blurRadius: 16,
+        offset: Offset(0, 4),
+      ),
+    ],
   );
 
-  /// Blue icon container decoration (with 0.13 opacity blue fill).
+  /// Icon container decoration.
   static BoxDecoration iconBox({
     BorderRadius? borderRadius,
   }) {
     return BoxDecoration(
-      color: AppColors.blue.withValues(alpha: 0.13),
+      color: const Color(0xFFEFF6FF),
       borderRadius: borderRadius ?? Sizes.radius13,
+      border: Border.all(color: const Color(0xFFDBEAFE)),
     );
   }
 
@@ -65,20 +102,28 @@ class Decorations {
   static final BoxDecoration headerIconGradient = BoxDecoration(
     borderRadius: Sizes.radius14,
     gradient: const LinearGradient(
-      colors: [AppColors.blue, AppColors.blueGradientEnd],
+      colors: [AppColors.blueGradientStart, AppColors.blueGradientEnd],
     ),
+    boxShadow: const [
+      BoxShadow(
+        color: Color(0x332563EB),
+        blurRadius: 10,
+        offset: Offset(0, 3),
+      ),
+    ],
   );
 
   /// Circular central hero icon gradient decoration.
   static final BoxDecoration circularHeroIcon = BoxDecoration(
     shape: BoxShape.circle,
     gradient: const LinearGradient(
-      colors: [AppColors.blue, AppColors.blueGradientEnd],
+      colors: [AppColors.blueGradientStart, AppColors.blueGradientEnd],
     ),
-    boxShadow: [
+    boxShadow: const [
       BoxShadow(
-        color: AppColors.blue.withValues(alpha: 0.28),
+        color: Color(0x402563EB),
         blurRadius: 24,
+        offset: Offset(0, 6),
       ),
     ],
   );
@@ -90,24 +135,30 @@ class Decorations {
       begin: Alignment.topLeft,
       end: Alignment.bottomRight,
       colors: [
-        AppColors.blue,
+        AppColors.blueGradientStart,
         AppColors.blueGradientEnd,
       ],
     ),
-    boxShadow: [
+    boxShadow: const [
       BoxShadow(
-        color: AppColors.blue.withValues(alpha: 0.3),
-        blurRadius: 32,
-        spreadRadius: 2,
+        color: Color(0x402563EB),
+        blurRadius: 28,
+        offset: Offset(0, 8),
       ),
     ],
   );
 
   /// Verified / Status small floating circular badge decoration.
   static final BoxDecoration floatingStatusBadge = BoxDecoration(
-    color: AppColors.panelAlt,
+    color: AppColors.panel,
     shape: BoxShape.circle,
-    border: Border.all(color: AppColors.cyan.withValues(alpha: 0.4)),
+    border: Border.all(color: const Color(0xFFBFDBFE)),
+    boxShadow: const [
+      BoxShadow(
+        color: AppColors.shadow,
+        blurRadius: 6,
+      ),
+    ],
   );
 
   /// Error / Alert container box decoration.
@@ -119,9 +170,9 @@ class Decorations {
 
   /// Success / Notification container box decoration.
   static final BoxDecoration successBox = BoxDecoration(
-    color: const Color(0xFF123A3D),
+    color: AppColors.successBackground,
     borderRadius: Sizes.radius14,
-    border: Border.all(color: AppColors.cyan.withValues(alpha: 0.4)),
+    border: Border.all(color: AppColors.successBorder),
   );
 
   /// Geofence boundary concentric circle decorations.

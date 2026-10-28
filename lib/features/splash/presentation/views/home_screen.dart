@@ -1,3 +1,5 @@
+
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
@@ -5,6 +7,7 @@ import 'package:geolocator/geolocator.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../../core/contants/constants.dart';
+import '../../../../core/localization/app_localizations.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -13,22 +16,32 @@ class HomeScreen extends StatefulWidget {
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> {
-  static const double _geofenceRadiusMeters = 50;
+class _HomeScreenState extends State<HomeScreen>
+    with WidgetsBindingObserver {
+  static const double _geofenceRadiusMeters = 150;
   static const double officeLatitude = 12.9328497;
   static const double officeLongitude = 77.5400525;
 
-  List<Map<String, dynamic>> _attendanceHistory = [];
+  static const String _historyKey = 'officecheck_attendance_history';
+
   Position? _position;
+  StreamSubscription<Position>? _positionStreamSubscription;
+
+  bool _isInitializing = true;
   bool _isLoadingLocation = false;
   bool _isSubmittingAttendance = false;
   bool _isCheckedIn = false;
+
   DateTime? _checkInTime;
   DateTime? _checkOutTime;
+
   String? _locationMessage;
   String? _attendanceMessage;
 
-  bool get _officeConfigured => officeLatitude != null && officeLongitude != null;
+  List<Map<String, dynamic>> _todaySessions = [];
+
+  bool get _officeConfigured =>
+      officeLatitude != 0 && officeLongitude != 0;
 
   double? get _distanceMeters {
     final position = _position;
@@ -47,11 +60,100 @@ class _HomeScreenState extends State<HomeScreen> {
     return distance != null && distance <= _geofenceRadiusMeters;
   }
 
+  DateTime? _parseTime(dynamic value) {
+    if (value == null) return null;
+    return DateTime.tryParse(value.toString())?.toLocal();
+  }
+
+  Duration get _totalDuration {
+    var total = Duration.zero;
+    final now = DateTime.now();
+
+    for (final session in _todaySessions) {
+      final checkIn = _parseTime(session['checkInTime']);
+      final checkOut = _parseTime(session['checkOutTime']);
+
+      if (checkIn == null) continue;
+
+      final end = checkOut ?? now;
+
+      if (end.isAfter(checkIn)) {
+        total += end.difference(checkIn);
+      }
+    }
+
+    return total;
+  }
+
   @override
   void initState() {
     super.initState();
-    _loadAttendance();
-    _refreshLocation();
+    WidgetsBinding.instance.addObserver(this);
+    unawaited(_initializeHome());
+    _startLiveLocationUpdates();
+  }
+
+  @override
+  void dispose() {
+    _positionStreamSubscription?.cancel();
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      unawaited(_refreshAfterResume());
+      _startLiveLocationUpdates();
+    } else if (state == AppLifecycleState.paused) {
+      _positionStreamSubscription?.cancel();
+    }
+  }
+
+  void _startLiveLocationUpdates() {
+    _positionStreamSubscription?.cancel();
+    const locationSettings = LocationSettings(
+      accuracy: LocationAccuracy.high,
+      distanceFilter: 5,
+    );
+
+    _positionStreamSubscription = Geolocator.getPositionStream(
+      locationSettings: locationSettings,
+    ).listen(
+      (Position position) {
+        if (!mounted || position.isMocked) return;
+        setState(() {
+          _position = position;
+          _locationMessage = null;
+          _isLoadingLocation = false;
+        });
+      },
+      onError: (dynamic error) {
+        debugPrint('Location stream update error: $error');
+      },
+    );
+  }
+
+  Future<void> _initializeHome() async {
+    try {
+      await Future.wait([
+        _loadAttendance(),
+        _refreshLocation(),
+      ]);
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isInitializing = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _refreshAfterResume() async {
+    await _loadAttendance();
+    if (!mounted) return;
+
+    await _refreshLocation();
   }
 
   String _dateKey(DateTime date) {
@@ -62,100 +164,183 @@ class _HomeScreenState extends State<HomeScreen> {
     return '$year-$month-$day';
   }
 
-
   Future<void> _loadAttendance() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      final historyJson =
-      prefs.getString('officecheck_attendance_history');
-
-      final List<dynamic> decoded = historyJson == null
-          ? <dynamic>[]
-          : jsonDecode(historyJson) as List<dynamic>;
-
-      final history = decoded
-          .whereType<Map>()
-          .map((item) => Map<String, dynamic>.from(item))
-          .toList()
-        ..sort(
-              (a, b) => (b['date'] as String)
-              .compareTo(a['date'] as String),
-        );
-
       final today = _dateKey(DateTime.now());
 
-      final todayRecords =
-      history.where((record) => record['date'] == today);
+      final rawHistory = prefs.getString(_historyKey);
+      final List<Map<String, dynamic>> records = [];
 
-      final Map<String, dynamic>? todayRecord =
-      todayRecords.isEmpty ? null : todayRecords.first;
+      if (rawHistory != null) {
+        final decoded = jsonDecode(rawHistory);
+
+        if (decoded is List) {
+          records.addAll(
+            decoded
+                .whereType<Map>()
+                .map((record) => Map<String, dynamic>.from(record)),
+          );
+        }
+      }
+
+      Map<String, dynamic>? todayRecord;
+
+      for (final record in records) {
+        if (record['date'] == today) {
+          todayRecord = record;
+          break;
+        }
+      }
+
+      if (todayRecord == null) {
+        todayRecord = {
+          'date': today,
+          'sessions': <Map<String, dynamic>>[],
+        };
+        records.add(todayRecord);
+      }
+
+      final rawSessions = todayRecord['sessions'];
+
+      final sessions = rawSessions is List
+          ? rawSessions
+          .whereType<Map>()
+          .map((session) => Map<String, dynamic>.from(session))
+          .toList()
+          : <Map<String, dynamic>>[];
+
+      // Migrate legacy attendance data when no session history exists.
+      if (sessions.isEmpty &&
+          prefs.getString('officecheck_date') == today) {
+        final legacyCheckIn =
+        prefs.getString('officecheck_check_in_time');
+        final legacyCheckOut =
+        prefs.getString('officecheck_check_out_time');
+
+        if (legacyCheckIn != null) {
+          sessions.add({
+            'checkInTime': legacyCheckIn,
+            'checkOutTime': legacyCheckOut,
+            'checkOutType':
+            legacyCheckOut == null ? null : 'manual',
+          });
+        }
+      }
+
+      todayRecord['sessions'] = sessions;
+
+      // Recover the actual state from attendance history.
+      final activeSessions = sessions.where(
+            (session) =>
+        session['checkInTime'] != null &&
+            session['checkOutTime'] == null,
+      ).toList();
+
+      final active = activeSessions.isEmpty
+          ? null
+          : activeSessions.last;
+
+      final latestSession =
+      sessions.isEmpty ? null : sessions.last;
+
+      final checkInValue =
+          active?['checkInTime'] ?? latestSession?['checkInTime'];
+
+      final checkOutValue = active != null
+          ? null
+          : latestSession?['checkOutTime'];
+
+      // Keep legacy preferences synchronized for other screens.
+      await prefs.setString('officecheck_date', today);
+      await prefs.setBool(
+        'officecheck_checked_in',
+        active != null,
+      );
+
+      if (checkInValue != null) {
+        await prefs.setString(
+          'officecheck_check_in_time',
+          checkInValue.toString(),
+        );
+      } else {
+        await prefs.remove('officecheck_check_in_time');
+      }
+
+      if (checkOutValue != null) {
+        await prefs.setString(
+          'officecheck_check_out_time',
+          checkOutValue.toString(),
+        );
+      } else {
+        await prefs.remove('officecheck_check_out_time');
+      }
+
+      await prefs.setString(_historyKey, jsonEncode(records));
 
       if (!mounted) return;
 
       setState(() {
-        _attendanceHistory = history;
-
-        _checkInTime = todayRecord?['checkInTime'] == null
-            ? null
-            : DateTime.tryParse(
-          todayRecord!['checkInTime'] as String,
-        );
-
-        _checkOutTime = todayRecord?['checkOutTime'] == null
-            ? null
-            : DateTime.tryParse(
-          todayRecord!['checkOutTime'] as String,
-        );
-
-        _isCheckedIn =
-            _checkInTime != null && _checkOutTime == null;
+        _todaySessions = sessions;
+        _isCheckedIn = active != null;
+        _checkInTime = _parseTime(checkInValue);
+        _checkOutTime = _parseTime(checkOutValue);
       });
-    } catch (e) {
-      debugPrint('Failed to load attendance history: $e');
+    } catch (error, stackTrace) {
+      debugPrint('Failed to load attendance: $error');
+      debugPrintStack(stackTrace: stackTrace);
     }
   }
 
   Future<Position?> _getFreshPosition() async {
+    final l10n = AppLocalizations.of(context);
+
     final serviceEnabled = await Geolocator.isLocationServiceEnabled();
     if (!serviceEnabled) {
-      throw Exception('Turn on Location Services in your device settings.');
+      throw Exception(l10n.turnOnLocationServices);
     }
 
     var permission = await Geolocator.checkPermission();
     if (permission == LocationPermission.denied) {
       permission = await Geolocator.requestPermission();
     }
-
     if (permission == LocationPermission.denied) {
-      throw Exception('Location permission is required for attendance.');
+      throw Exception(l10n.locationPermissionRequired);
     }
-
     if (permission == LocationPermission.deniedForever) {
-      throw Exception(
-        'Location permission is blocked. Enable it in app settings.',
-      );
+      throw Exception(l10n.locationPermissionBlocked);
     }
 
+    // Try last known position first for quick rendering without delay
+    Position? pos = await Geolocator.getLastKnownPosition();
+    if (pos != null && !pos.isMocked) {
+      final lastKnownAge = DateTime.now().difference(pos.timestamp).abs();
+      if (lastKnownAge <= const Duration(minutes: 5)) {
+        // Return recent cached location immediately
+        return pos;
+      }
+    }
+
+    // Otherwise obtain current position with balanced settings so it resolves promptly
     final position = await Geolocator.getCurrentPosition(
       locationSettings: const LocationSettings(
-        accuracy: LocationAccuracy.high,
-        timeLimit: Duration(seconds: 15),
+        accuracy: LocationAccuracy.medium,
+        timeLimit: Duration(seconds: 7),
       ),
     );
 
-    final age = DateTime.now().difference(position.timestamp).abs();
-    if (age > const Duration(seconds: 30)) {
-      throw Exception('Location is too old. Please try again.');
-    }
-
     if (position.isMocked) {
-      throw Exception('Mock location detected. Attendance was not recorded.');
+      throw Exception(l10n.mockLocationDetected);
     }
 
     return position;
   }
 
   Future<void> _refreshLocation() async {
+    if (!mounted) return;
+
+    final l10n = AppLocalizations.of(context);
+
     setState(() {
       _isLoadingLocation = true;
       _locationMessage = null;
@@ -163,43 +348,42 @@ class _HomeScreenState extends State<HomeScreen> {
 
     try {
       final position = await _getFreshPosition();
+
       if (!mounted) return;
 
       setState(() {
         _position = position;
-        _locationMessage = _officeConfigured
-            ? null
-            : 'Set your office coordinates in HomeScreen before testing '
-            'geofence attendance.';
+        _locationMessage =
+        _officeConfigured ? null : l10n.setOfficeCoordinates;
       });
     } catch (error) {
       if (!mounted) return;
+
       setState(() {
-        _locationMessage = error.toString().replaceFirst('Exception: ', '');
+        _locationMessage =
+            error.toString().replaceFirst('Exception: ', '');
+        _position = null;
       });
     } finally {
       if (mounted) {
-        setState(() => _isLoadingLocation = false);
+        setState(() {
+          _isLoadingLocation = false;
+        });
       }
     }
   }
 
-
   Future<void> _handleAttendanceAction() async {
+    final l10n = AppLocalizations.of(context);
+
     if (!_officeConfigured) {
       setState(() {
-        _attendanceMessage = 'Office coordinates are not configured.';
+        _attendanceMessage = l10n.officeNotConfiguredWarning;
       });
       return;
     }
 
-    // A completed attendance record cannot be changed again today.
-    if (_checkInTime != null && _checkOutTime != null) {
-      setState(() {
-        _attendanceMessage = 'Attendance is already completed for today.';
-      });
-      return;
-    }
+    if (_isSubmittingAttendance) return;
 
     setState(() {
       _isSubmittingAttendance = true;
@@ -207,11 +391,10 @@ class _HomeScreenState extends State<HomeScreen> {
     });
 
     try {
-      // Always validate using a fresh location.
       final position = await _getFreshPosition();
 
       if (position == null) {
-        throw Exception('Unable to obtain your current location.');
+        throw Exception(l10n.locationPermissionRequired);
       }
 
       final distance = Geolocator.distanceBetween(
@@ -222,87 +405,120 @@ class _HomeScreenState extends State<HomeScreen> {
       );
 
       if (distance > _geofenceRadiusMeters) {
-        throw Exception(
-          'You are outside the 150 m office boundary. '
-              'Attendance was not recorded.',
-        );
+        throw Exception(l10n.outsideBoundaryError);
       }
+
+      if (!mounted) return;
 
       final now = DateTime.now();
-      final today = _dateKey(now);
       final prefs = await SharedPreferences.getInstance();
 
-      final historyJson =
-      prefs.getString('officecheck_attendance_history');
+      final rawHistory = prefs.getString(_historyKey);
+      final List<Map<String, dynamic>> records = [];
 
-      final List<dynamic> decoded = historyJson == null
-          ? <dynamic>[]
-          : jsonDecode(historyJson) as List<dynamic>;
+      if (rawHistory != null) {
+        final decoded = jsonDecode(rawHistory);
 
-      final history = decoded
-          .whereType<Map>()
-          .map((item) => Map<String, dynamic>.from(item))
-          .toList();
-
-      final index = history.indexWhere(
-            (record) => record['date'] == today,
-      );
-
-      late final Map<String, dynamic> record;
-      late final bool isCheckIn;
-
-      if (index == -1) {
-        // No record exists today: create the one allowed check-in.
-        record = <String, dynamic>{
-          'date': today,
-          'checkInTime': now.toIso8601String(),
-          'checkOutTime': null,
-          'status': 'incomplete',
-        };
-
-        history.add(record);
-        isCheckIn = true;
-      } else {
-        // A record exists today. Only checkout is allowed now.
-        record = history[index];
-
-        if (record['checkInTime'] == null) {
-          throw Exception('Invalid attendance record for today.');
+        if (decoded is List) {
+          records.addAll(
+            decoded
+                .whereType<Map>()
+                .map((record) => Map<String, dynamic>.from(record)),
+          );
         }
-
-        if (record['checkOutTime'] != null) {
-          throw Exception('Attendance is already completed for today.');
-        }
-
-        record['checkOutTime'] = now.toIso8601String();
-        record['status'] = 'completed';
-
-        history[index] = record;
-        isCheckIn = false;
       }
 
-      // Save all days, not just today's record.
-      await prefs.setString(
-        'officecheck_attendance_history',
-        jsonEncode(history),
+      final today = _dateKey(now);
+
+      Map<String, dynamic>? todayRecord;
+
+      for (final record in records) {
+        if (record['date'] == today) {
+          todayRecord = record;
+          break;
+        }
+      }
+
+      if (todayRecord == null) {
+        todayRecord = {
+          'date': today,
+          'sessions': <Map<String, dynamic>>[],
+        };
+        records.add(todayRecord);
+      }
+
+      final rawSessions = todayRecord['sessions'];
+
+      final sessions = rawSessions is List
+          ? rawSessions
+          .whereType<Map>()
+          .map((session) => Map<String, dynamic>.from(session))
+          .toList()
+          : <Map<String, dynamic>>[];
+
+      final activeIndexes = <int>[];
+
+      for (var i = 0; i < sessions.length; i++) {
+        final session = sessions[i];
+
+        if (session['checkInTime'] != null &&
+            session['checkOutTime'] == null) {
+          activeIndexes.add(i);
+        }
+      }
+
+      if (_isCheckedIn) {
+        // Check out the latest active session.
+        if (activeIndexes.isEmpty) {
+          throw StateError(
+            'Attendance state is inconsistent. Refresh and try again.',
+          );
+        }
+
+        final index = activeIndexes.last;
+
+        sessions[index]['checkOutTime'] = now.toIso8601String();
+        sessions[index]['checkOutType'] = 'manual';
+      } else {
+        if (activeIndexes.isNotEmpty) {
+          throw StateError(
+            'An active attendance session already exists.',
+          );
+        }
+
+        // Create another session for the same day.
+        sessions.add({
+          'checkInTime': now.toIso8601String(),
+          'checkOutTime': null,
+          'checkOutType': null,
+        });
+      }
+
+      todayRecord['sessions'] = sessions;
+
+      final historySaved = await prefs.setString(
+        _historyKey,
+        jsonEncode(records),
       );
 
-      // Update legacy keys in case other existing code uses them.
+      if (!historySaved) {
+        throw StateError('Could not save attendance history.');
+      }
+
+      final latest = sessions.last;
+      final checkedIn = latest['checkOutTime'] == null;
+
       await prefs.setString('officecheck_date', today);
-      await prefs.setBool(
-        'officecheck_checked_in',
-        isCheckIn,
-      );
-
+      await prefs.setBool('officecheck_checked_in', checkedIn);
       await prefs.setString(
         'officecheck_check_in_time',
-        record['checkInTime'] as String,
+        latest['checkInTime'].toString(),
       );
 
-      if (record['checkOutTime'] != null) {
+      if (latest['checkOutTime'] != null) {
         await prefs.setString(
           'officecheck_check_out_time',
-          record['checkOutTime'] as String,
+          latest['checkOutTime'].toString(),
         );
       } else {
         await prefs.remove('officecheck_check_out_time');
@@ -310,15 +526,15 @@ class _HomeScreenState extends State<HomeScreen> {
 
       if (!mounted) return;
 
-      await _loadAttendance();
-
-      if (!mounted) return;
-
       setState(() {
         _position = position;
-        _attendanceMessage = isCheckIn
-            ? 'Check In recorded on this device.'
-            : 'Check Out recorded on this device.';
+        _todaySessions = sessions;
+        _isCheckedIn = checkedIn;
+        _checkInTime = _parseTime(latest['checkInTime']);
+        _checkOutTime = _parseTime(latest['checkOutTime']);
+        _attendanceMessage = checkedIn
+            ? l10n.checkInRecorded
+            : l10n.checkOutRecorded;
       });
     } catch (error) {
       if (!mounted) return;
@@ -329,21 +545,57 @@ class _HomeScreenState extends State<HomeScreen> {
       });
     } finally {
       if (mounted) {
-        setState(() => _isSubmittingAttendance = false);
+        setState(() {
+          _isSubmittingAttendance = false;
+        });
       }
     }
   }
 
   String _formatTime(DateTime? value) {
     if (value == null) return '--:--';
+
     final hour = value.hour % 12 == 0 ? 12 : value.hour % 12;
     final minute = value.minute.toString().padLeft(2, '0');
     final period = value.hour >= 12 ? 'PM' : 'AM';
+
     return '$hour:$minute $period';
+  }
+
+  String _formatDuration(Duration duration) {
+    final hours = duration.inHours;
+    final minutes = duration.inMinutes.remainder(60);
+
+    return '${hours}h ${minutes}m';
   }
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+
+    // Wait for attendance and the first location check before
+    // displaying the normal home screen.
+    if (_isInitializing || _isLoadingLocation) {
+      return Scaffold(
+        backgroundColor: AppColors.background,
+        body: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const CircularProgressIndicator(
+                color: AppColors.blue,
+              ),
+              Sizes.gapH16,
+              Text(
+                l10n.statusChecking,
+                style: TextStyles.bodyMedium,
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
     final inside = _isInsideOffice;
     final distance = _distanceMeters;
 
@@ -352,7 +604,10 @@ class _HomeScreenState extends State<HomeScreen> {
       body: SafeArea(
         child: RefreshIndicator(
           color: AppColors.blue,
-          onRefresh: _refreshLocation,
+          onRefresh: () async {
+            await _loadAttendance();
+            await _refreshLocation();
+          },
           child: ListView(
             padding: const EdgeInsets.fromLTRB(22, 18, 22, 30),
             children: [
@@ -369,182 +624,251 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                   ),
                   Sizes.gapW12,
-                  const Expanded(
+                  Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'OfficeCheck',
+                          l10n.appTitle,
                           style: TextStyles.appBarTitle,
                         ),
                         Sizes.gapH4,
                         Text(
-                          'Your workplace, in range.',
-                          style: TextStyle(color: AppColors.muted, fontSize: 12),
+                          l10n.yourWorkplaceInRange,
+                          style: const TextStyle(
+                            color: AppColors.muted,
+                            fontSize: 12,
+                          ),
                         ),
                       ],
                     ),
                   ),
                   IconButton(
-                    tooltip: 'Refresh location',
-                    onPressed: _isLoadingLocation ? null : _refreshLocation,
+                    tooltip: l10n.refreshLocationTooltip,
+                    onPressed:
+                    _isLoadingLocation ? null : _refreshLocation,
                     icon: _isLoadingLocation
                         ? const SizedBox(
                       width: 20,
                       height: 20,
                       child: CircularProgressIndicator(
                         strokeWidth: 2,
-                        color: AppColors.cyan,
+                        color: AppColors.blue,
                       ),
                     )
-                        : const Icon(Icons.refresh_rounded, color: AppColors.cyan),
+                        : const Icon(
+                      Icons.refresh_rounded,
+                      color: AppColors.blue,
+                    ),
                   ),
                 ],
               ),
               Sizes.gapH26,
-              _buildGeofenceCard(inside, distance),
+              _buildGeofenceCard(l10n, inside, distance),
               Sizes.gapH18,
-              _buildAttendanceCard(),
+              _buildAttendanceCard(l10n),
               if (_locationMessage != null) ...[
                 Sizes.gapH16,
-                _messageCard(
+                FeedbackMessageCard(
                   icon: Icons.info_outline_rounded,
                   message: _locationMessage!,
-                  warning: !_officeConfigured,
+                  isWarning: !_officeConfigured,
                 ),
               ],
               if (_attendanceMessage != null) ...[
                 Sizes.gapH12,
-                _messageCard(
+                FeedbackMessageCard(
                   icon: Icons.fact_check_outlined,
                   message: _attendanceMessage!,
-                  warning: _attendanceMessage!.contains('not') ||
-                      _attendanceMessage!.contains('outside') ||
-                      _attendanceMessage!.contains('not configured'),
+                  isWarning:
+                  _attendanceMessage!.toLowerCase().contains('outside') ||
+                      _attendanceMessage!.toLowerCase().contains('not'),
                 ),
               ],
-              Sizes.gapH26,
-              const Text(
-                'TODAY',
-                style: TextStyles.sectionHeader,
-              ),
-              Sizes.gapH12,
-              Row(
-                children: [
-                  Expanded(
-                    child: _timeCard(
-                      title: 'Check In',
-                      time: _formatTime(_checkInTime),
-                      icon: Icons.login_rounded,
-                    ),
-                  ),
-                  Sizes.gapW12,
-                  Expanded(
-                    child: _timeCard(
-                      title: 'Check Out',
-                      time: _formatTime(_checkOutTime),
-                      icon: Icons.logout_rounded,
-                    ),
-                  ),
-                ],
-              ),
-
-
+              // Today's attendance sessions and total duration.
               Sizes.gapH24,
-              const Text(
-                'ATTENDANCE HISTORY',
-                style: TextStyles.sectionHeader,
-              ),
-              Sizes.gapH12,
-
-              if (_attendanceHistory.isEmpty)
-                const Text(
-                  'No attendance history yet.',
-                  style: TextStyle(
-                    color: AppColors.muted,
-                    fontSize: 12,
-                  ),
-                )
-              else
-                ..._attendanceHistory.map((record) {
-                  final checkIn = record['checkInTime'] == null
-                      ? null
-                      : DateTime.tryParse(
-                    record['checkInTime'] as String,
-                  );
-
-                  final checkOut = record['checkOutTime'] == null
-                      ? null
-                      : DateTime.tryParse(
-                    record['checkOutTime'] as String,
-                  );
-
-                  final date = record['date'] as String? ?? '';
-                  final completed = checkOut != null;
-
-                  return Padding(
-                    padding: const EdgeInsets.only(bottom: 8),
-                    child: Container(
-                      padding: AppPaddings.all14,
-                      decoration: Decorations.panelCard(),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
+              Container(
+                padding: AppPaddings.all20,
+                decoration: Decorations.panelCard22,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Container(
+                          padding: AppPaddings.all8,
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFEFF6FF),
+                            borderRadius: Sizes.radius12,
+                          ),
+                          child: const Icon(
+                            Icons.calendar_month_rounded,
+                            size: 20,
+                            color: AppColors.blue,
+                          ),
+                        ),
+                        Sizes.gapW12,
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Expanded(
-                                child: Text(
-                                  date,
-                                  style: TextStyles.sectionTitle,
-                                ),
-                              ),
                               Text(
-                                completed ? 'Completed' : 'Incomplete',
-                                style: TextStyle(
-                                  color: completed
-                                      ? AppColors.cyan
-                                      : const Color(0xFFFFC078),
+                                l10n.todaySessions,
+                                style: TextStyles.sectionHeader,
+                              ),
+                              Sizes.gapH4,
+                              Text(
+                                l10n.todaySessionsSubtitle,
+                                style: const TextStyle(
+                                  color: AppColors.muted,
                                   fontSize: 12,
-                                  fontWeight: FontWeight.w700,
                                 ),
                               ),
                             ],
                           ),
-                          Sizes.gapH8,
-                          Text(
-                            'Check In: ${_formatTime(checkIn)}',
-                            style: const TextStyle(
-                              color: AppColors.muted,
-                              fontSize: 12,
+                        ),
+                      ],
+                    ),
+                    Sizes.gapH20,
+
+                    // Summary Banner
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF8FAFC),
+                        borderRadius: Sizes.radius14,
+                        border: Border.all(color: AppColors.borderSubtle),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(
+                            Icons.timelapse_rounded,
+                            color: AppColors.blue,
+                            size: 24,
+                          ),
+                          Sizes.gapW12,
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  l10n.totalWorkHours,
+                                  style: const TextStyle(
+                                    color: AppColors.muted,
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                                Sizes.gapH4,
+                                Text(
+                                  _formatDuration(_totalDuration),
+                                  style: const TextStyle(
+                                    color: AppColors.textPrimary,
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
-                          Sizes.gapH4,
-                          Text(
-                            'Check Out: ${_formatTime(checkOut)}',
-                            style: const TextStyle(
-                              color: AppColors.muted,
-                              fontSize: 12,
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                            decoration: BoxDecoration(
+                              color: AppColors.panel,
+                              borderRadius: Sizes.radius12,
+                              border: Border.all(color: AppColors.borderSubtle),
+                            ),
+                            child: Text(
+                              '${_todaySessions.length} ${_todaySessions.length == 1 ? "Session" : "Sessions"}',
+                              style: const TextStyle(
+                                color: AppColors.blue,
+                                fontSize: 11,
+                                fontWeight: FontWeight.w600,
+                              ),
                             ),
                           ),
                         ],
                       ),
                     ),
-                  );
-                }),
+                    Sizes.gapH16,
 
+                    if (_todaySessions.isEmpty)
+                      Container(
+                        padding: const EdgeInsets.symmetric(vertical: 28, horizontal: 16),
+                        alignment: Alignment.center,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFFAFAFA),
+                          borderRadius: Sizes.radius14,
+                          border: Border.all(
+                            color: AppColors.borderSubtle,
+                            strokeAlign: BorderSide.strokeAlignCenter,
+                          ),
+                        ),
+                        child: Column(
+                          children: [
+                            const Icon(
+                              Icons.history_toggle_off_rounded,
+                              size: 40,
+                              color: AppColors.textSubtle,
+                            ),
+                            Sizes.gapH10,
+                            Text(
+                              l10n.noAttendanceSessionsYet,
+                              textAlign: TextAlign.center,
+                              style: const TextStyle(
+                                color: AppColors.textSecondary,
+                                fontSize: 13,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ],
+                        ),
+                      )
+                    else
+                      ..._todaySessions.asMap().entries.map((entry) {
+                        final index = entry.key;
+                        final session = entry.value;
+
+                        final checkIn = _parseTime(session['checkInTime']);
+                        final checkOut = _parseTime(session['checkOutTime']);
+                        final isCompleted = !(checkIn != null && checkOut == null);
+
+                        final duration = checkIn == null
+                            ? Duration.zero
+                            : (checkOut ?? DateTime.now()).difference(checkIn);
+
+                        final isAutoGeofence = session['checkOutType'] == 'geofence';
+
+                        return SessionTimelineCard(
+                          sessionNumber: index + 1,
+                          checkInFormatted: _formatTime(checkIn),
+                          checkOutFormatted: isCompleted
+                              ? _formatTime(checkOut)
+                              : l10n.activeSession,
+                          durationFormatted: _formatDuration(duration),
+                          isCompleted: isCompleted,
+                          isAutoGeofence: isAutoGeofence,
+                        );
+                      }),
+                  ],
+                ),
+              ),
               Sizes.gapH24,
               Container(
                 padding: AppPaddings.all16,
                 decoration: Decorations.panelCard(),
-                child: const Row(
+                child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Icon(Icons.shield_outlined, color: AppColors.cyan, size: 22),
+                    const Icon(
+                      Icons.shield_outlined,
+                      color: AppColors.blue,
+                      size: 22,
+                    ),
                     Sizes.gapW12,
                     Expanded(
                       child: Text(
-                        'Attendance is allowed only after a fresh location '
-                            'check confirms you are within the office boundary.',
+                        l10n.freshLocationCheckNotice,
                         style: TextStyles.bodySmall12,
                       ),
                     ),
@@ -558,18 +882,26 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildGeofenceCard(bool inside, double? distance) {
+  Widget _buildGeofenceCard(
+      AppLocalizations l10n,
+      bool inside,
+      double? distance,
+      ) {
     final statusColor = !_officeConfigured
         ? AppColors.muted
+        : distance == null
+        ? AppColors.blue
         : inside
-        ? AppColors.cyan
-        : const Color(0xFFFFC078);
+        ? AppColors.success
+        : const Color(0xFFD97706);
 
     final statusText = !_officeConfigured
-        ? 'Office not configured'
+        ? l10n.officeNotConfigured
+        : distance == null
+        ? l10n.checkingLocation
         : inside
-        ? 'You are inside the office zone'
-        : 'You are outside the office zone';
+        ? l10n.insideOfficeZone
+        : l10n.outsideOfficeZone;
 
     return Container(
       padding: AppPaddings.all20,
@@ -578,97 +910,87 @@ class _HomeScreenState extends State<HomeScreen> {
         children: [
           Row(
             children: [
-              const Expanded(
+              Expanded(
                 child: Text(
-                  'OFFICE PROXIMITY',
+                  l10n.officeProximity,
                   style: TextStyles.sectionHeader,
                 ),
               ),
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: 6,
-                ),
-                decoration: Decorations.statusPill(statusColor),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(Icons.circle, color: statusColor, size: 7),
-                    Sizes.gapW4,
-                    Text(
-                      inside && _officeConfigured ? 'IN RANGE' : 'STATUS',
-                      style: TextStyle(
-                        color: statusColor,
-                        fontSize: 10,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ],
-                ),
+              StatusPill(
+                text: inside && _officeConfigured
+                    ? l10n.inRange
+                    : l10n.statusBadge,
+                color: statusColor,
               ),
             ],
           ),
-          Sizes.gapH20,
+          Sizes.gapH8,
           SizedBox(
-            width: 170,
-            height: 170,
+            width: 120,
+            height: 120,
             child: Stack(
               alignment: Alignment.center,
               children: [
                 Container(
-                  width: 164,
-                  height: 164,
+                  width: 140,
+                  height: 140,
                   decoration: Decorations.concentricCircle(
-                    borderColor: AppColors.blue.withValues(alpha: 0.3),
+                    borderColor: const Color(0xFFBFDBFE),
                   ),
                 ),
                 Container(
-                  width: 126,
-                  height: 126,
+                  width: 100,
+                  height: 100,
                   decoration: Decorations.concentricCircle(
-                    borderColor: AppColors.cyan.withValues(alpha: 0.4),
-                    fillColor: AppColors.cyan.withValues(alpha: 0.05),
+                    borderColor: const Color(0xFF93C5FD),
+                    fillColor: const Color(0x203B82F6),
                   ),
                 ),
                 Container(
-                  width: 82,
-                  height: 82,
+                  width: 60,
+                  height: 60,
                   decoration: Decorations.circularHeroIcon,
                   child: const Icon(
                     Icons.my_location_rounded,
                     color: AppColors.white,
-                    size: 38,
+                    size: 24,
                   ),
                 ),
               ],
             ),
           ),
-          Sizes.gapH14,
-          Text(
-            distance == null ? '-- m' : '${distance.round()} m',
-            style: TextStyles.metricLarge,
-          ),
-          Sizes.gapH4,
+          Sizes.gapH8,
           Text(
             statusText,
             textAlign: TextAlign.center,
-            style: TextStyle(color: statusColor, fontSize: 13),
+            style: TextStyle(
+              color: statusColor,
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+            ),
           ),
           Sizes.gapH18,
           Row(
             children: [
-              const Icon(Icons.radio_button_checked, color: AppColors.cyan, size: Sizes.iconSm),
+              const Icon(
+                Icons.radio_button_checked,
+                color: AppColors.blue,
+                size: Sizes.iconSm,
+              ),
               Sizes.gapW8,
-              const Expanded(
+              Expanded(
                 child: Text(
-                  'Office boundary',
-                  style: TextStyle(color: AppColors.muted, fontSize: 12),
+                  l10n.officeBoundary,
+                  style: const TextStyle(
+                    color: AppColors.muted,
+                    fontSize: 12,
+                  ),
                 ),
               ),
-              const Text(
-                '50 m radius',
-                style: TextStyle(
-                  color: AppColors.white,
+              Text(
+                l10n.radiusMeters,
+                style: const TextStyle(
+                  color: AppColors.textPrimary,
                   fontSize: 12,
                   fontWeight: FontWeight.w600,
                 ),
@@ -680,10 +1002,8 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildAttendanceCard() {
+  Widget _buildAttendanceCard(AppLocalizations l10n) {
     final checkedIn = _isCheckedIn;
-    final completedToday =
-        _checkInTime != null && _checkOutTime != null;
 
     return Container(
       padding: AppPaddings.all20,
@@ -691,23 +1011,22 @@ class _HomeScreenState extends State<HomeScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'ATTENDANCE',
-            style: TextStyles.sectionHeader,
-          ),
-          Sizes.gapH12,
           Row(
             children: [
               Icon(
-                checkedIn ? Icons.check_circle_rounded : Icons.schedule_rounded,
-                color: checkedIn ? AppColors.cyan : AppColors.muted,
-                size: 25,
+                checkedIn
+                    ? Icons.check_circle_rounded
+                    : Icons.schedule_rounded,
+                color: checkedIn
+                    ? AppColors.success
+                    : AppColors.muted,
+                size: 24,
               ),
               Sizes.gapW10,
               Expanded(
                 child: Text(
-                  checkedIn ? 'You are checked in' : 'Not checked in yet',
-                  style: TextStyles.sectionTitle,
+                  checkedIn ? l10n.checkIn : l10n.checkOut,
+                  style: TextStyles.sectionHeader,
                 ),
               ),
             ],
@@ -719,8 +1038,7 @@ class _HomeScreenState extends State<HomeScreen> {
             child: FilledButton.icon(
               onPressed: _isSubmittingAttendance ||
                   _isLoadingLocation ||
-                  !_officeConfigured ||
-                  completedToday
+                  !_officeConfigured
                   ? null
                   : _handleAttendanceAction,
               icon: _isSubmittingAttendance
@@ -733,22 +1051,23 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               )
                   : Icon(
-                checkedIn ? Icons.logout_rounded : Icons.login_rounded,
+                checkedIn
+                    ? Icons.logout_rounded
+                    : Icons.login_rounded,
               ),
               label: Text(
                 _isSubmittingAttendance
-                    ? 'Checking location...'
-                    : completedToday
-                    ? 'Completed for today'
+                    ? l10n.checkingLocation
                     : checkedIn
-                    ? 'Check Out'
-                    : 'Check In',
+                    ? l10n.checkOut
+                    : l10n.checkIn,
               ),
               style: FilledButton.styleFrom(
                 backgroundColor: checkedIn
-                    ? const Color(0xFF263B54)
+                    ? const Color(0xFF475569)
                     : AppColors.blue,
-                disabledBackgroundColor: AppColors.blue.withValues(alpha: 0.25),
+                disabledBackgroundColor:
+                AppColors.blue.withValues(alpha: 0.25),
                 foregroundColor: AppColors.white,
                 shape: RoundedRectangleBorder(
                   borderRadius: Sizes.radius16,
@@ -762,61 +1081,15 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
           if (!_officeConfigured) ...[
             Sizes.gapH10,
-            const Text(
-              'Attendance actions will be enabled after the office coordinates are configured.',
-              style: TextStyle(color: AppColors.muted, fontSize: 11, height: 1.5),
+            Text(
+              l10n.attendanceAfterConfigNotice,
+              style: const TextStyle(
+                color: AppColors.muted,
+                fontSize: 11,
+                height: 1.5,
+              ),
             ),
           ],
-        ],
-      ),
-    );
-  }
-
-  Widget _timeCard({
-    required String title,
-    required String time,
-    required IconData icon,
-  }) {
-    return Container(
-      padding: AppPaddings.card,
-      decoration: Decorations.panelCard(),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(icon, color: AppColors.cyan, size: Sizes.iconMd),
-          Sizes.gapH12,
-          Text(title, style: const TextStyle(color: AppColors.muted, fontSize: 12)),
-          Sizes.gapH4,
-          Text(
-            time,
-            style: TextStyles.timeDisplay,
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _messageCard({
-    required IconData icon,
-    required String message,
-    required bool warning,
-  }) {
-    final color = warning ? const Color(0xFFFFC078) : AppColors.cyan;
-
-    return Container(
-      padding: AppPaddings.all14,
-      decoration: Decorations.messageCard(color),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(icon, color: color, size: 19),
-          Sizes.gapW10,
-          Expanded(
-            child: Text(
-              message,
-              style: TextStyle(color: color, fontSize: 12, height: 1.5),
-            ),
-          ),
         ],
       ),
     );

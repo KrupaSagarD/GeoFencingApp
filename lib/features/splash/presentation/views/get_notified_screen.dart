@@ -2,12 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:permission_handler/permission_handler.dart';
 
 import '../../../../core/contants/constants.dart';
+import '../../../../core/localization/app_localizations.dart';
 
 class GetNotifiedScreen extends StatefulWidget {
   const GetNotifiedScreen({super.key, this.onContinue});
 
-  /// Called after notification setup when the app is ready to move forward.
-  /// Connect this to the next onboarding screen when it is available.
   final VoidCallback? onContinue;
 
   @override
@@ -55,6 +54,7 @@ class _GetNotifiedScreenState extends State<GetNotifiedScreen>
   }
 
   Future<void> _enableNotifications() async {
+    final l10n = AppLocalizations.of(context);
     setState(() {
       _isRequesting = true;
       _message = null;
@@ -70,13 +70,11 @@ class _GetNotifiedScreenState extends State<GetNotifiedScreen>
       setState(() {
         _notificationStatus = status;
         if (status.isGranted) {
-          _message = 'Notifications are enabled on this device.';
+          _message = l10n.notificationsEnabledOnDevice;
         } else if (status.isPermanentlyDenied) {
-          _message =
-          'Notification permission is blocked. Enable it in app settings.';
+          _message = l10n.notificationBlockedMsg;
         } else {
-          _message =
-          'Notifications are needed so OfficeCheck can prompt you to confirm attendance.';
+          _message = l10n.notificationPromptMsg;
         }
       });
 
@@ -86,7 +84,7 @@ class _GetNotifiedScreenState extends State<GetNotifiedScreen>
     } catch (_) {
       if (!mounted) return;
       setState(() {
-        _message = 'We could not check notification access. Please try again.';
+        _message = l10n.notificationCheckFailed;
       });
     } finally {
       if (mounted) {
@@ -96,12 +94,13 @@ class _GetNotifiedScreenState extends State<GetNotifiedScreen>
   }
 
   void _continue() {
+    final l10n = AppLocalizations.of(context);
     if (_notificationsEnabled) {
       if (widget.onContinue != null) {
         widget.onContinue!();
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Notification setup is complete.')),
+          SnackBar(content: Text(l10n.notificationSetupComplete)),
         );
       }
       return;
@@ -112,11 +111,13 @@ class _GetNotifiedScreenState extends State<GetNotifiedScreen>
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+
     final buttonLabel = _notificationsEnabled
-        ? 'Continue'
+        ? l10n.continueButton
         : _permanentlyDenied
-        ? 'Open App Settings'
-        : 'Enable Notifications';
+        ? l10n.openAppSettings
+        : l10n.enableNotificationsButton;
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -127,7 +128,7 @@ class _GetNotifiedScreenState extends State<GetNotifiedScreen>
             right: -110,
             child: AppGlowCircle(
               size: 300,
-              color: AppColors.blue.withValues(alpha: 0.13),
+              color: AppColors.blue.withValues(alpha: 0.08),
             ),
           ),
           Positioned(
@@ -135,7 +136,7 @@ class _GetNotifiedScreenState extends State<GetNotifiedScreen>
             left: -150,
             child: AppGlowCircle(
               size: 300,
-              color: AppColors.cyan.withValues(alpha: 0.07),
+              color: AppColors.cyan.withValues(alpha: 0.06),
             ),
           ),
           SafeArea(
@@ -146,42 +147,39 @@ class _GetNotifiedScreenState extends State<GetNotifiedScreen>
                   constraints: const BoxConstraints(maxWidth: Sizes.maxContentWidth),
                   child: Column(
                     children: [
-                      _buildIllustration(),
-                      Sizes.gapH8,
-                      const Text(
-                        'Never miss a Notification.',
+                      const PermissionHeroIllustration(
+                        centerIcon: Icons.notifications_active_rounded,
+                        badgeIcon: Icons.check_rounded,
+                      ),
+                      Sizes.gapH32,
+                      Text(
+                        l10n.neverMissAPrompt,
                         textAlign: TextAlign.center,
                         style: TextStyles.headline29,
                       ),
-                      Sizes.gapH12,
-                      const Text(
-                        'Get a gentle reminder when OfficeCheck detects that you arrive at or leave your workplace.',
-                        textAlign: TextAlign.center,
-                        style: TextStyles.bodyLarge,
-                      ),
-                      Sizes.gapH30,
-                      _infoRow(
+                      Sizes.gapH20,
+                      PermissionItemRow(
                         icon: Icons.login_rounded,
-                        title: 'Arrival reminder',
-                        subtitle: 'Confirm your Check In when you reach the office.',
+                        title: l10n.arrivalReminderTitle,
+                        subtitle: l10n.arrivalReminderSubtitle,
                       ),
                       Sizes.gapH12,
-                      _infoRow(
+                      PermissionItemRow(
                         icon: Icons.logout_rounded,
-                        title: 'Departure reminder',
-                        subtitle: 'Get prompted to confirm your Check Out when you leave.',
+                        title: l10n.departureReminderTitle,
+                        subtitle: l10n.departureReminderSubtitle,
                       ),
                       Sizes.gapH12,
-                      _infoRow(
+                      PermissionItemRow(
                         icon: _notificationsEnabled
                             ? Icons.check_circle_rounded
                             : Icons.notifications_active_outlined,
-                        title: 'Notifications',
+                        title: l10n.notificationsTitle,
                         subtitle: _notificationsEnabled
-                            ? 'Notification permission is enabled.'
-                            : 'You stay in control and confirm attendance yourself.',
-                        trailing: _notificationsEnabled ? 'Enabled' : 'Required',
-                        enabled: _notificationsEnabled,
+                            ? l10n.notificationsEnabledSubtitle
+                            : l10n.notificationsRequiredSubtitle,
+                        trailingText: _notificationsEnabled ? l10n.statusEnabled : l10n.statusRequired,
+                        isGranted: _notificationsEnabled,
                       ),
                       if (_message != null) ...[
                         Sizes.gapH18,
@@ -195,60 +193,25 @@ class _GetNotifiedScreenState extends State<GetNotifiedScreen>
                             _message!,
                             style: TextStyle(
                               color: _notificationsEnabled
-                                  ? AppColors.cyan
+                                  ? AppColors.successText
                                   : AppColors.errorText,
                               fontSize: 13,
                               height: 1.5,
+                              fontWeight: FontWeight.w500,
                             ),
                           ),
                         ),
                       ],
                       Sizes.gapH26,
-                      SizedBox(
-                        width: double.infinity,
-                        height: Sizes.buttonHeight,
-                        child: FilledButton(
-                          onPressed: _isRequesting
-                              ? null
-                              : _permanentlyDenied
-                              ? openAppSettings
-                              : _continue,
-                          style: FilledButton.styleFrom(
-                            backgroundColor: AppColors.blue,
-                            disabledBackgroundColor:
-                            AppColors.blue.withValues(alpha: 0.45),
-                            foregroundColor: AppColors.white,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: Sizes.radius16,
-                            ),
-                          ),
-                          child: _isRequesting
-                              ? const SizedBox(
-                            width: 22,
-                            height: 22,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: AppColors.white,
-                            ),
-                          )
-                              : Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(
-                                _notificationsEnabled
-                                    ? Icons.check_circle_outline_rounded
-                                    : _permanentlyDenied
-                                    ? Icons.settings_outlined
-                                    : Icons.notifications_active_rounded,
-                              ),
-                              Sizes.gapW10,
-                              Text(
-                                buttonLabel,
-                                style: TextStyles.button,
-                              ),
-                            ],
-                          ),
-                        ),
+                      AppPrimaryButton(
+                        text: buttonLabel,
+                        isLoading: _isRequesting,
+                        icon: _notificationsEnabled
+                            ? Icons.check_circle_outline_rounded
+                            : _permanentlyDenied
+                            ? Icons.settings_outlined
+                            : Icons.notifications_active_rounded,
+                        onPressed: _permanentlyDenied ? openAppSettings : _continue,
                       ),
                       Sizes.gapH14,
                       TextButton(
@@ -256,18 +219,17 @@ class _GetNotifiedScreenState extends State<GetNotifiedScreen>
                             ? widget.onContinue
                             : () {
                           setState(() {
-                            _message =
-                            'You can enable notifications later in Android Settings. Attendance prompts may not appear until then.';
+                            _message = l10n.enableNotificationsLater;
                           });
                         },
                         child: Text(
-                          _notificationsEnabled ? 'Continue setup' : 'Maybe later',
+                          _notificationsEnabled ? l10n.continueSetupButton : l10n.maybeLaterButton,
                           style: TextStyles.cyanLink,
                         ),
                       ),
                       Sizes.gapH18,
-                      const Text(
-                        'YOU CONFIRM EVERY ATTENDANCE ACTION',
+                      Text(
+                        l10n.confirmEveryActionNotice,
                         textAlign: TextAlign.center,
                         style: TextStyles.overline10,
                       ),
@@ -277,107 +239,6 @@ class _GetNotifiedScreenState extends State<GetNotifiedScreen>
               ),
             ),
           ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildIllustration() {
-    return SizedBox(
-      width: 190,
-      height: 190,
-      child: Stack(
-        alignment: Alignment.center,
-        children: [
-          Container(
-            width: 154,
-            height: 154,
-            decoration: Decorations.concentricCircle(
-              borderColor: AppColors.blue.withValues(alpha: 0.2),
-            ),
-          ),
-          Container(
-            width: 125,
-            height: 125,
-            decoration: Decorations.concentricCircle(
-              borderColor: AppColors.cyan.withValues(alpha: 0.35),
-              fillColor: AppColors.blue.withValues(alpha: 0.07),
-            ),
-          ),
-          Container(
-            width: 68,
-            height: 68,
-            decoration: Decorations.roundedHeroIcon,
-            child: const Icon(
-              Icons.notifications_active_rounded,
-              color: AppColors.white,
-              size: 48,
-            ),
-          ),
-          Positioned(
-            top: 18,
-            right: 25,
-            child: Container(
-              padding: AppPaddings.all8,
-              decoration: Decorations.floatingStatusBadge,
-              child: const Icon(
-                Icons.check_rounded,
-                color: AppColors.cyan,
-                size: 21,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _infoRow({
-    required IconData icon,
-    required String title,
-    required String subtitle,
-    String? trailing,
-    bool enabled = false,
-  }) {
-    return Container(
-      padding: AppPaddings.card,
-      decoration: Decorations.panelCard(),
-      child: Row(
-        children: [
-          Container(
-            width: 44,
-            height: 44,
-            decoration: Decorations.iconBox(),
-            child: Icon(icon, color: AppColors.cyan, size: 23),
-          ),
-          Sizes.gapW13,
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: TextStyles.itemTitle,
-                ),
-                Sizes.gapH4,
-                Text(
-                  subtitle,
-                  style: TextStyles.bodySmall,
-                ),
-              ],
-            ),
-          ),
-          if (trailing != null) ...[
-            Sizes.gapW8,
-            Text(
-              trailing,
-              style: TextStyle(
-                color: enabled ? AppColors.cyan : AppColors.muted,
-                fontSize: 11,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ],
         ],
       ),
     );

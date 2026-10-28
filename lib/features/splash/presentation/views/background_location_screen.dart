@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../../core/contants/constants.dart';
+import '../../../../core/localization/app_localizations.dart';
 import '../../../location/data/services/geofencing_service.dart';
 
 class BackgroundLocationScreen extends StatefulWidget {
@@ -17,12 +19,14 @@ class BackgroundLocationScreen extends StatefulWidget {
       _BackgroundLocationScreenState();
 }
 
-class _BackgroundLocationScreenState extends State<BackgroundLocationScreen> with WidgetsBindingObserver {
+class _BackgroundLocationScreenState extends State<BackgroundLocationScreen>
+    with WidgetsBindingObserver {
   LocationPermission? _permission;
   bool _loading = true;
   String? _error;
 
-  bool get _hasBackgroundAccess => _permission == LocationPermission.always;
+  bool get _hasBackgroundAccess =>
+      _permission == LocationPermission.always;
 
   @override
   void initState() {
@@ -47,9 +51,8 @@ class _BackgroundLocationScreenState extends State<BackgroundLocationScreen> wit
   static const double _officeLatitude = 12.9328497;
   static const double _officeLongitude = 77.5400525;
 
-  final OfficeGeofencingService _geofencingService = OfficeGeofencingService();
-
-  bool _isRegisteringGeofence = false;
+  final OfficeGeofencingService _geofencingService =
+      OfficeGeofencingService();
 
   Future<void> _refreshPermission() async {
     if (!mounted) return;
@@ -60,7 +63,10 @@ class _BackgroundLocationScreenState extends State<BackgroundLocationScreen> wit
     });
 
     try {
-      final permission = await Geolocator.checkPermission();
+      final permission = await Geolocator.checkPermission().timeout(
+        const Duration(seconds: 3),
+        onTimeout: () => LocationPermission.denied,
+      );
 
       if (!mounted) return;
 
@@ -73,7 +79,7 @@ class _BackgroundLocationScreenState extends State<BackgroundLocationScreen> wit
 
       setState(() {
         _loading = false;
-        _error = 'Could not check permission. Please try again.';
+        _error = AppLocalizations.of(context).couldNotCheckPermission;
       });
 
       debugPrint('Background permission check failed: $e');
@@ -81,90 +87,84 @@ class _BackgroundLocationScreenState extends State<BackgroundLocationScreen> wit
   }
 
   Future<void> _openSettings() async {
+    final l10n = AppLocalizations.of(context);
     try {
       await Geolocator.openAppSettings();
     } catch (e) {
       if (!mounted) return;
 
       setState(() {
-        _error =
-            'Could not open Settings. Please open OfficeCheck '
-            'permissions from your device Settings.';
+        _error = l10n.openSettingsFailed;
       });
 
       debugPrint('Opening app settings failed: $e');
     }
   }
 
-  Future<void> _continueToHome() async {
-    if (!_hasBackgroundAccess || _isRegisteringGeofence) {
-      return;
-    }
-
-    setState(() {
-      _isRegisteringGeofence = true;
-      _error = null;
-    });
-
+  Future<void> _handleOfficeExit(DateTime eventTime) async {
     try {
-      await _geofencingService.start(
-        latitude: _officeLatitude,
-        longitude: _officeLongitude,
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool('officecheck_checked_in', false);
+      await prefs.setString(
+        'officecheck_check_out_time',
+        eventTime.toLocal().toIso8601String(),
       );
-
-      if (!mounted) return;
-
-      if (widget.onContinue != null) {
-        widget.onContinue!();
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Home navigation is not connected yet.'),
-          ),
-        );
-      }
-    } catch (error, stackTrace) {
-      debugPrint('Geofence registration failed: $error');
-      debugPrintStack(stackTrace: stackTrace);
-
-      if (!mounted) return;
-
-      setState(() {
-        _error = 'Could not start office monitoring. Please try again.';
-      });
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isRegisteringGeofence = false;
-        });
-      }
+      debugPrint('BackgroundLocationScreen: exit recorded at $eventTime');
+    } catch (e) {
+      debugPrint('Error handling office exit in background: $e');
     }
   }
 
-  String get _status {
-    if (_loading) return 'Checking...';
+  void _continueToHome() {
+    final l10n = AppLocalizations.of(context);
+
+    // Immediately navigate to HomeScreen first so user experiences instant transition
+    if (widget.onContinue != null) {
+      widget.onContinue!();
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(l10n.homeNavNotConnected),
+        ),
+      );
+    }
+
+    // Register geofencing asynchronously in background without delaying navigation
+    _geofencingService.start(
+      latitude: _officeLatitude,
+      longitude: _officeLongitude,
+      onOfficeExit: _handleOfficeExit,
+    ).catchError((Object error, StackTrace stackTrace) {
+      debugPrint('Background geofence registration error: $error');
+      debugPrintStack(stackTrace: stackTrace);
+    });
+  }
+
+  String _getStatus(AppLocalizations l10n) {
+    if (_loading) return l10n.statusChecking;
 
     if (_permission == LocationPermission.always) {
-      return 'Enabled';
+      return l10n.statusEnabled;
     }
 
     if (_permission == LocationPermission.whileInUse) {
-      return 'While using';
+      return l10n.statusWhileUsing;
     }
 
     if (_permission == LocationPermission.deniedForever) {
-      return 'Blocked';
+      return l10n.statusBlocked;
     }
 
     if (_permission == LocationPermission.denied) {
-      return 'Not enabled';
+      return l10n.statusNotEnabled;
     }
 
-    return 'Unknown';
+    return l10n.statusUnknown;
   }
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final enabled = _hasBackgroundAccess;
 
     return Scaffold(
@@ -178,11 +178,11 @@ class _BackgroundLocationScreenState extends State<BackgroundLocationScreen> wit
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  const Text(
-                    'OFFICECHECK  •  SETUP',
+                  Text(
+                    l10n.officeCheckSetup,
                     textAlign: TextAlign.center,
-                    style: TextStyle(
-                      color: AppColors.cyan,
+                    style: const TextStyle(
+                      color: AppColors.blue,
                       fontSize: 11,
                       fontWeight: FontWeight.bold,
                       letterSpacing: 1.5,
@@ -194,39 +194,38 @@ class _BackgroundLocationScreenState extends State<BackgroundLocationScreen> wit
                       width: 170,
                       height: 170,
                       decoration: Decorations.concentricCircle(
-                        borderColor: AppColors.cyan.withValues(alpha: 0.35),
-                        fillColor: AppColors.blue.withValues(alpha: 0.08),
+                        borderColor: const Color(0xFFBFDBFE),
+                        fillColor: const Color(0xFFEFF6FF),
                       ),
                       child: Icon(
                         enabled
                             ? Icons.verified_user_rounded
                             : Icons.location_on_rounded,
                         size: 78,
-                        color: AppColors.cyan,
+                        color: AppColors.blue,
                       ),
                     ),
                   ),
                   Sizes.gapH30,
-                  const Text(
-                    'Stay connected\nwhen you step away.',
+                  Text(
+                    l10n.stayConnectedWhenAway,
                     textAlign: TextAlign.center,
-                    style: TextStyle(
-                      color: AppColors.white,
+                    style: const TextStyle(
+                      color: AppColors.textPrimary,
                       fontSize: 29,
                       height: 1.2,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
                   Sizes.gapH14,
-                  const Text(
-                    'Allow background location so OfficeCheck can '
-                    'recognise office entry and exit when your phone '
-                    'is locked or the app is not open.',
+                  Text(
+                    l10n.allowBackgroundLocationDesc,
                     textAlign: TextAlign.center,
                     style: TextStyles.bodyMedium,
                   ),
                   Sizes.gapH28,
 
+                  // Background permission status
                   Container(
                     padding: AppPaddings.all16,
                     decoration: Decorations.panelCard18,
@@ -234,24 +233,25 @@ class _BackgroundLocationScreenState extends State<BackgroundLocationScreen> wit
                       children: [
                         const Icon(
                           Icons.my_location_rounded,
-                          color: AppColors.cyan,
+                          color: AppColors.blue,
                           size: 28,
                         ),
-                        Sizes.gapW12,
-                        const Expanded(
+                        Sizes.gapW16,
+                        Expanded(
                           child: Text(
-                            'Background location',
+                            l10n.backgroundLocationRowTitle,
                             style: TextStyles.itemTitle,
                           ),
                         ),
                         Sizes.gapW8,
                         Flexible(
                           child: Text(
-                            _status,
+                            _getStatus(l10n),
                             textAlign: TextAlign.end,
                             style: TextStyle(
-                              color: enabled ? AppColors.cyan : AppColors.muted,
+                              color: enabled ? AppColors.blue : AppColors.muted,
                               fontSize: 12,
+                              fontWeight: FontWeight.w600,
                             ),
                           ),
                         ),
@@ -263,11 +263,9 @@ class _BackgroundLocationScreenState extends State<BackgroundLocationScreen> wit
                   Container(
                     padding: AppPaddings.all15,
                     decoration: Decorations.panelCard16,
-                    child: const Text(
-                      'In Android Settings, select Permissions → '
-                      'Location → Allow all the time, if available. '
-                      'The exact menu may vary by device.',
-                      style: TextStyle(
+                    child: Text(
+                      l10n.backgroundLocationInstructions,
+                      style: const TextStyle(
                         color: AppColors.muted,
                         fontSize: 13,
                         height: 1.6,
@@ -282,53 +280,41 @@ class _BackgroundLocationScreenState extends State<BackgroundLocationScreen> wit
 
                   Sizes.gapH24,
 
-                  SizedBox(
-                    width: double.infinity,
-                    height: Sizes.buttonHeight,
-                    child: FilledButton(
-                      onPressed: _loading || _isRegisteringGeofence
-                          ? null
-                          : enabled
-                          ? _continueToHome
-                          : _openSettings,
-                      style: FilledButton.styleFrom(
-                        backgroundColor: AppColors.blue,
-                        foregroundColor: AppColors.white,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: Sizes.radius16,
-                        ),
-                      ),
-                      child: _loading || _isRegisteringGeofence
-                          ? const SizedBox(
-                              width: 22,
-                              height: 22,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                color: AppColors.white,
-                              ),
-                            )
-                          : Text(
-                              enabled ? 'Next' : 'Open App Settings',
-                              style: TextStyles.button,
-                            ),
-                    ),
+                  // Main action
+                  AppPrimaryButton(
+                    text: l10n.nextButton,
+                    isLoading: false,
+                    onPressed: _continueToHome,
                   ),
 
                   Sizes.gapH10,
 
+                  if (!enabled && !_loading) ...[
+                    TextButton.icon(
+                      onPressed: _openSettings,
+                      icon: const Icon(Icons.settings_outlined, size: 16),
+                      label: Text(
+                        l10n.openAppSettings,
+                        style: TextStyles.cyanLink,
+                      ),
+                    ),
+                    Sizes.gapH4,
+                  ],
+
+                  // Refresh status
                   TextButton(
                     onPressed: _loading ? null : _refreshPermission,
-                    child: const Text(
-                      'Refresh permission status',
+                    child: Text(
+                      l10n.refreshPermissionStatus,
                       style: TextStyles.cyanLink,
                     ),
                   ),
 
                   Sizes.gapH12,
-                  const Text(
-                    'Location is used for workplace attendance.',
+                  Text(
+                    l10n.locationUsedAttendance,
                     textAlign: TextAlign.center,
-                    style: TextStyle(
+                    style: const TextStyle(
                       color: AppColors.textSubtle,
                       fontSize: 11,
                     ),

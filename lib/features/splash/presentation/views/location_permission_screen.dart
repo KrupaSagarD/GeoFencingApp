@@ -1,6 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 
+import '../../../../core/contants/colors.dart';
+import '../../../../core/contants/decorations.dart';
+import '../../../../core/contants/paddings.dart';
+import '../../../../core/contants/reusable_widgets.dart';
+import '../../../../core/contants/sizes.dart';
+import '../../../../core/contants/text_styles.dart';
 import 'background_location_screen.dart';
 import 'get_notified_screen.dart';
 import 'home_screen.dart';
@@ -12,25 +18,18 @@ class LocationPermissionScreen extends StatefulWidget {
   State<LocationPermissionScreen> createState() => _LocationPermissionScreenState();
 }
 
-class _LocationPermissionScreenState extends State<LocationPermissionScreen>
-    with WidgetsBindingObserver {
-  static const Color _background = Color(0xFF071426);
-  static const Color _blue = Color(0xFF3987FF);
-  static const Color _cyan = Color(0xFF54E0E8);
-  static const Color _muted = Color(0xFF9BB0C9);
-
+class _LocationPermissionScreenState extends State<LocationPermissionScreen> with WidgetsBindingObserver {
   LocationPermission? _permission;
   bool _locationServicesEnabled = false;
   bool _isRequesting = false;
   String? _errorMessage;
 
-  bool get _hasLocationPermission =>
-      _permission == LocationPermission.whileInUse || _permission == LocationPermission.always;
+  bool get _hasLocationPermission => _permission == LocationPermission.whileInUse || _permission == LocationPermission.always;
 
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addObserver(this);
+    WidgetsBinding.instance.addObserver(this);   // used to register this object as a lifecycle as a lifecycle observer
     _checkPermission();
   }
 
@@ -113,16 +112,16 @@ class _LocationPermissionScreenState extends State<LocationPermissionScreen>
               'at the office.';
         });
       }
-    }  catch (e, stackTrace) {
-  debugPrint('Location permission error: $e');
-  debugPrintStack(stackTrace: stackTrace);
+    } catch (e, stackTrace) {
+      debugPrint('Location permission error: $e');
+      debugPrintStack(stackTrace: stackTrace);
 
-  if (mounted) {
-    setState(() {
-      _errorMessage = 'Location setup failed. Please try again.';
-    });
-  }
-  }finally {
+      if (mounted) {
+        setState(() {
+          _errorMessage = 'Location setup failed. Please try again.';
+        });
+      }
+    } finally {
       if (mounted) {
         setState(() {
           _isRequesting = false;
@@ -152,39 +151,43 @@ class _LocationPermissionScreenState extends State<LocationPermissionScreen>
   void _showBackgroundInfo() {
     showModalBottomSheet<void>(
       context: context,
-      backgroundColor: const Color(0xFF10223A),
+      backgroundColor: AppColors.panel,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+        borderRadius: Sizes.radiusBottomSheet,
       ),
       builder: (context) {
         return SafeArea(
           child: Padding(
-            padding: const EdgeInsets.all(24),
+            padding: AppPaddings.bottomSheet,
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Icon(Icons.location_searching_rounded, color: _cyan, size: 32),
-                const SizedBox(height: 18),
+                const Icon(
+                  Icons.location_searching_rounded,
+                  color: AppColors.cyan,
+                  size: Sizes.iconXl,
+                ),
+                Sizes.gapH18,
                 const Text(
                   'Why background location?',
-                  style: TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.w700),
+                  style: TextStyles.titleLarge,
                 ),
-                const SizedBox(height: 12),
+                Sizes.gapH12,
                 const Text(
                   'OfficeCheck needs background location access '
                   'to detect when you enter or leave the office '
                   'while your phone is locked or the app is not open.',
-                  style: TextStyle(color: _muted, fontSize: 14, height: 1.6),
+                  style: TextStyles.bodyMedium,
                 ),
-                const SizedBox(height: 12),
+                Sizes.gapH12,
                 const Text(
                   'Android handles this separately from foreground '
                   'location access. We will guide you through the '
                   'required settings in the next setup step.',
-                  style: TextStyle(color: _muted, fontSize: 14, height: 1.6),
+                  style: TextStyles.bodyMedium,
                 ),
-                const SizedBox(height: 24),
+                Sizes.gapH24,
                 SizedBox(
                   width: double.infinity,
                   child: FilledButton(
@@ -203,42 +206,51 @@ class _LocationPermissionScreenState extends State<LocationPermissionScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: _background,
+      backgroundColor: AppColors.background,
       body: Stack(
         children: [
-          Positioned(top: -130, right: -110, child: _glow(300, _blue.withValues(alpha: 0.13))),
-          Positioned(bottom: 50, left: -150, child: _glow(300, _cyan.withValues(alpha: 0.07))),
+          Positioned(
+            top: -130,
+            right: -110,
+            child: AppGlowCircle(
+              size: 200,
+              color: AppColors.blue.withValues(alpha: 0.13),
+            ),
+          ),
+          Positioned(
+            bottom: 50,
+            left: -150,
+            child: AppGlowCircle(
+              size: 200,
+              color: AppColors.cyan.withValues(alpha: 0.07),
+            ),
+          ),
           SafeArea(
             child: Center(
               child: SingleChildScrollView(
-                padding: const EdgeInsets.symmetric(horizontal: 26, vertical: 24),
+                padding: AppPaddings.screen,
                 child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 420),
+                  constraints: const BoxConstraints(maxWidth: Sizes.maxContentWidth),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
                       _buildIllustration(),
-                      const SizedBox(height: 32),
+                      Sizes.gapH8,
 
                       const Text(
                         'Stay in the loop.',
                         textAlign: TextAlign.center,
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 30,
-                          fontWeight: FontWeight.w700,
-                          letterSpacing: -0.7,
-                        ),
+                        style: TextStyles.headline,
                       ),
-                      const SizedBox(height: 12),
+                      Sizes.gapH12,
                       const Text(
                         'Let OfficeCheck recognise your arrival '
                         'and departure without keeping the app open.',
                         textAlign: TextAlign.center,
-                        style: TextStyle(color: _muted, fontSize: 15, height: 1.6),
+                        style: TextStyles.bodyLarge,
                       ),
 
-                      const SizedBox(height: 30),
+                      Sizes.gapH30,
 
                       _permissionRow(
                         icon: Icons.my_location_rounded,
@@ -253,7 +265,7 @@ class _LocationPermissionScreenState extends State<LocationPermissionScreen>
                             : 'Needed',
                         granted: _hasLocationPermission && _locationServicesEnabled,
                       ),
-                      const SizedBox(height: 12),
+                      Sizes.gapH12,
                       _permissionRow(
                         icon: Icons.nightlight_round,
                         title: 'Background access',
@@ -263,7 +275,7 @@ class _LocationPermissionScreenState extends State<LocationPermissionScreen>
                         status: 'Setup next',
                         granted: false,
                       ),
-                      const SizedBox(height: 12),
+                      Sizes.gapH12,
                       _permissionRow(
                         icon: Icons.notifications_active_outlined,
                         title: 'Notifications',
@@ -275,31 +287,15 @@ class _LocationPermissionScreenState extends State<LocationPermissionScreen>
                       ),
 
                       if (_errorMessage != null) ...[
-                        const SizedBox(height: 18),
-                        Container(
-                          width: double.infinity,
-                          padding: const EdgeInsets.all(14),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFF451F2B),
-                            borderRadius: BorderRadius.circular(14),
-                            border: Border.all(color: const Color(0xFF8E3D4B)),
-                          ),
-                          child: Text(
-                            _errorMessage!,
-                            style: const TextStyle(
-                              color: Color(0xFFFFC3CC),
-                              fontSize: 13,
-                              height: 1.5,
-                            ),
-                          ),
-                        ),
+                        Sizes.gapH18,
+                        AppErrorBanner(message: _errorMessage!),
                       ],
 
-                      const SizedBox(height: 26),
+                      Sizes.gapH26,
 
                       SizedBox(
                         width: double.infinity,
-                        height: 54,
+                        height: Sizes.buttonHeight,
                         child: FilledButton(
                           onPressed: _isRequesting
                               ? null
@@ -329,10 +325,10 @@ class _LocationPermissionScreenState extends State<LocationPermissionScreen>
                           }
                               : _handleLocationButton,
                           style: FilledButton.styleFrom(
-                            backgroundColor: _blue,
-                            disabledBackgroundColor: _blue.withValues(alpha: 0.45),
-                            foregroundColor: Colors.white,
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                            backgroundColor: AppColors.blue,
+                            disabledBackgroundColor: AppColors.blue.withValues(alpha: 0.45),
+                            foregroundColor: AppColors.white,
+                            shape: RoundedRectangleBorder(borderRadius: Sizes.radius16),
                           ),
                           child: _isRequesting
                               ? const SizedBox(
@@ -340,7 +336,7 @@ class _LocationPermissionScreenState extends State<LocationPermissionScreen>
                                   height: 22,
                                   child: CircularProgressIndicator(
                                     strokeWidth: 2,
-                                    color: Colors.white,
+                                    color: AppColors.white,
                                   ),
                                 )
                               : Row(
@@ -355,7 +351,7 @@ class _LocationPermissionScreenState extends State<LocationPermissionScreen>
                                           ? Icons.settings_outlined
                                           : Icons.location_on_rounded,
                                     ),
-                                    const SizedBox(width: 10),
+                                    Sizes.gapW10,
                                     Text(
                                       _hasLocationPermission && _locationServicesEnabled
                                           ? 'Location Access Enabled'
@@ -364,38 +360,29 @@ class _LocationPermissionScreenState extends State<LocationPermissionScreen>
                                           : _permission == LocationPermission.deniedForever
                                           ? 'Open App Settings'
                                           : 'Enable Location Access',
-                                      style: const TextStyle(
-                                        fontSize: 15,
-                                        fontWeight: FontWeight.w600,
-                                      ),
+                                      style: TextStyles.button,
                                     ),
                                   ],
                                 ),
                         ),
                       ),
 
-                      const SizedBox(height: 16),
+                      Sizes.gapH16,
 
                       TextButton(
                         onPressed: _showBackgroundInfo,
                         child: const Text(
                           'Why do we need background access?',
-                          style: TextStyle(color: _cyan, fontWeight: FontWeight.w500),
+                          style: TextStyles.cyanLink,
                         ),
                       ),
 
-                      const SizedBox(height: 18),
+                      Sizes.gapH18,
 
                       const Text(
-                        'YOUR LOCATION IS USED FOR WORKPLACE '
-                        'ATTENDANCE',
+                        'YOUR LOCATION IS USED FOR WORKPLACE ATTENDANCE',
                         textAlign: TextAlign.center,
-                        style: TextStyle(
-                          color: Color(0xFF7188A5),
-                          fontSize: 10,
-                          letterSpacing: 1.1,
-                          height: 1.6,
-                        ),
+                        style: TextStyles.overline10,
                       ),
                     ],
                   ),
@@ -416,49 +403,41 @@ class _LocationPermissionScreenState extends State<LocationPermissionScreen>
         alignment: Alignment.center,
         children: [
           Container(
-            width: 184,
-            height: 184,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              border: Border.all(color: _blue.withValues(alpha: 0.2)),
+            width: 154,
+            height: 154,
+            decoration: Decorations.concentricCircle(
+              borderColor: AppColors.blue.withValues(alpha: 0.2),
             ),
           ),
           Container(
-            width: 145,
-            height: 145,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: _blue.withValues(alpha: 0.07),
-              border: Border.all(color: _cyan.withValues(alpha: 0.35)),
+            width: 125,
+            height: 125,
+            decoration: Decorations.concentricCircle(
+              borderColor: AppColors.cyan.withValues(alpha: 0.35),
+              fillColor: AppColors.blue.withValues(alpha: 0.07),
             ),
           ),
           Container(
-            width: 98,
-            height: 98,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(30),
-              gradient: const LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [Color(0xFF3987FF), Color(0xFF164BC0)],
-              ),
-              boxShadow: [
-                BoxShadow(color: _blue.withValues(alpha: 0.3), blurRadius: 32, spreadRadius: 2),
-              ],
+            width: 68,
+            height: 68,
+            decoration: Decorations.roundedHeroIcon,
+            child: const Icon(
+              Icons.location_on_rounded,
+              color: AppColors.white,
+              size: Sizes.iconHero,
             ),
-            child: const Icon(Icons.location_on_rounded, color: Colors.white, size: 54),
           ),
           Positioned(
             top: 18,
             right: 25,
             child: Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: const Color(0xFF102B43),
-                shape: BoxShape.circle,
-                border: Border.all(color: _cyan.withValues(alpha: 0.4)),
+              padding: AppPaddings.all8,
+              decoration: Decorations.floatingStatusBadge,
+              child: const Icon(
+                Icons.verified_user_rounded,
+                color: AppColors.cyan,
+                size: 21,
               ),
-              child: const Icon(Icons.verified_user_rounded, color: _cyan, size: 21),
             ),
           ),
         ],
@@ -474,59 +453,34 @@ class _LocationPermissionScreenState extends State<LocationPermissionScreen>
     required bool granted,
   }) {
     return Container(
-      padding: const EdgeInsets.all(15),
-      decoration: BoxDecoration(
-        color: const Color(0xFF10223A),
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.07)),
-      ),
+      padding: AppPaddings.card,
+      decoration: Decorations.panelCard(),
       child: Row(
         children: [
           Container(
             width: 44,
             height: 44,
-            decoration: BoxDecoration(
-              color: _blue.withValues(alpha: 0.13),
-              borderRadius: BorderRadius.circular(13),
-            ),
-            child: Icon(icon, color: _cyan, size: 23),
+            decoration: Decorations.iconBox(),
+            child: Icon(icon, color: AppColors.cyan, size: 23),
           ),
-          const SizedBox(width: 13),
+          Sizes.gapW13,
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  title,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                const SizedBox(height: 5),
-                Text(subtitle, style: const TextStyle(color: _muted, fontSize: 11, height: 1.45)),
+                Text(title, style: TextStyles.itemTitle),
+                Sizes.gapH4,
+                Text(subtitle, style: TextStyles.bodySmall),
               ],
             ),
           ),
-          const SizedBox(width: 8),
+          Sizes.gapW8,
           Icon(
             granted ? Icons.check_circle : Icons.arrow_forward_ios_rounded,
-            color: granted ? _cyan : _muted,
+            color: granted ? AppColors.cyan : AppColors.muted,
             size: granted ? 19 : 15,
           ),
         ],
-      ),
-    );
-  }
-
-  Widget _glow(double size, Color color) {
-    return Container(
-      width: size,
-      height: size,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        gradient: RadialGradient(colors: [color, color.withValues(alpha: 0)]),
       ),
     );
   }

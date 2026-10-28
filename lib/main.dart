@@ -1,15 +1,15 @@
-
 import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'core/contants/colors.dart';
 import 'features/splash/presentation/views/location_permission_screen.dart';
 import 'features/splash/presentation/views/splash_screen.dart';
 
 void main() {
   runApp(
-    const ProviderScope(
+    const ProviderScope(  // It makes Riverpod providers available
       child: OfficeCheckApp(),
     ),
   );
@@ -26,7 +26,7 @@ class OfficeCheckApp extends StatelessWidget {
       theme: ThemeData(
         useMaterial3: true,
         brightness: Brightness.dark,
-        scaffoldBackgroundColor: const Color(0xFF071426),
+        scaffoldBackgroundColor: AppColors.background,
       ),
       home: const SplashGate(),
     );

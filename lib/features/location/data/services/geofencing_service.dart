@@ -14,7 +14,7 @@ class OfficeGeofencingService {
   bool _isStarted = false;
 
   static const String _officeRegionId = 'office';
-  static const double _geofenceRadiusMeters = 150;
+  static const double _geofenceRadiusMeters = 50;
 
   Future<void> start({
     required double latitude,

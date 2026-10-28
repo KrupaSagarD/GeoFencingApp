@@ -1,6 +1,10 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
+import '../../../../core/contants/constants.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -10,16 +14,11 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  static const Color _background = Color(0xFF071426);
-  static const Color _panel = Color(0xFF10223A);
-  static const Color _blue = Color(0xFF3987FF);
-  static const Color _cyan = Color(0xFF54E0E8);
-  static const Color _muted = Color(0xFF9BB0C9);
-  static const double _geofenceRadiusMeters = 150;
-
+  static const double _geofenceRadiusMeters = 50;
   static const double officeLatitude = 12.9328497;
   static const double officeLongitude = 77.5400525;
 
+  List<Map<String, dynamic>> _attendanceHistory = [];
   Position? _position;
   bool _isLoadingLocation = false;
   bool _isSubmittingAttendance = false;
@@ -29,8 +28,7 @@ class _HomeScreenState extends State<HomeScreen> {
   String? _locationMessage;
   String? _attendanceMessage;
 
-  bool get _officeConfigured =>
-      officeLatitude != null && officeLongitude != null;
+  bool get _officeConfigured => officeLatitude != null && officeLongitude != null;
 
   double? get _distanceMeters {
     final position = _position;
@@ -39,8 +37,8 @@ class _HomeScreenState extends State<HomeScreen> {
     return Geolocator.distanceBetween(
       position.latitude,
       position.longitude,
-      officeLatitude!,
-      officeLongitude!,
+      officeLatitude,
+      officeLongitude,
     );
   }
 
@@ -64,49 +62,56 @@ class _HomeScreenState extends State<HomeScreen> {
     return '$year-$month-$day';
   }
 
+
   Future<void> _loadAttendance() async {
     try {
       final prefs = await SharedPreferences.getInstance();
+      final historyJson =
+      prefs.getString('officecheck_attendance_history');
+
+      final List<dynamic> decoded = historyJson == null
+          ? <dynamic>[]
+          : jsonDecode(historyJson) as List<dynamic>;
+
+      final history = decoded
+          .whereType<Map>()
+          .map((item) => Map<String, dynamic>.from(item))
+          .toList()
+        ..sort(
+              (a, b) => (b['date'] as String)
+              .compareTo(a['date'] as String),
+        );
+
       final today = _dateKey(DateTime.now());
-      final savedDate = prefs.getString('officecheck_date');
 
-      // Start a new daily record when the date changes.
-      if (savedDate != today) {
-        await prefs.setString('officecheck_date', today);
-        await prefs.setBool('officecheck_checked_in', false);
-        await prefs.remove('officecheck_check_in_time');
-        await prefs.remove('officecheck_check_out_time');
+      final todayRecords =
+      history.where((record) => record['date'] == today);
 
-        if (!mounted) return;
-
-        setState(() {
-          _isCheckedIn = false;
-          _checkInTime = null;
-          _checkOutTime = null;
-        });
-
-        return;
-      }
-
-      final checkInString =
-      prefs.getString('officecheck_check_in_time');
-      final checkOutString =
-      prefs.getString('officecheck_check_out_time');
+      final Map<String, dynamic>? todayRecord =
+      todayRecords.isEmpty ? null : todayRecords.first;
 
       if (!mounted) return;
 
       setState(() {
+        _attendanceHistory = history;
+
+        _checkInTime = todayRecord?['checkInTime'] == null
+            ? null
+            : DateTime.tryParse(
+          todayRecord!['checkInTime'] as String,
+        );
+
+        _checkOutTime = todayRecord?['checkOutTime'] == null
+            ? null
+            : DateTime.tryParse(
+          todayRecord!['checkOutTime'] as String,
+        );
+
         _isCheckedIn =
-            prefs.getBool('officecheck_checked_in') ?? false;
-        _checkInTime = checkInString == null
-            ? null
-            : DateTime.tryParse(checkInString);
-        _checkOutTime = checkOutString == null
-            ? null
-            : DateTime.tryParse(checkOutString);
+            _checkInTime != null && _checkOutTime == null;
       });
     } catch (e) {
-      debugPrint('Failed to load attendance: $e');
+      debugPrint('Failed to load attendance history: $e');
     }
   }
 
@@ -179,12 +184,19 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
+
   Future<void> _handleAttendanceAction() async {
     if (!_officeConfigured) {
       setState(() {
-        _attendanceMessage =
-        'Office coordinates are not configured yet. Set them in '
-            'HomeScreen before using attendance.';
+        _attendanceMessage = 'Office coordinates are not configured.';
+      });
+      return;
+    }
+
+    // A completed attendance record cannot be changed again today.
+    if (_checkInTime != null && _checkOutTime != null) {
+      setState(() {
+        _attendanceMessage = 'Attendance is already completed for today.';
       });
       return;
     }
@@ -195,11 +207,15 @@ class _HomeScreenState extends State<HomeScreen> {
     });
 
     try {
-      // Fetch a fresh position at the moment of the attendance action.
-      // Do not rely only on the last displayed location.
+      // Always validate using a fresh location.
       final position = await _getFreshPosition();
+
+      if (position == null) {
+        throw Exception('Unable to obtain your current location.');
+      }
+
       final distance = Geolocator.distanceBetween(
-        position!.latitude,
+        position.latitude,
         position.longitude,
         officeLatitude,
         officeLongitude,
@@ -212,60 +228,104 @@ class _HomeScreenState extends State<HomeScreen> {
         );
       }
 
-      if (!mounted) return;
-
       final now = DateTime.now();
-      final nextCheckedIn = !_isCheckedIn;
-
-      final nextCheckInTime =
-      nextCheckedIn ? now : _checkInTime;
-
-      final nextCheckOutTime =
-      nextCheckedIn ? _checkOutTime : now;
-
-// Save before updating the visible attendance state.
+      final today = _dateKey(now);
       final prefs = await SharedPreferences.getInstance();
 
-      await prefs.setString(
-        'officecheck_date',
-        _dateKey(now),
+      final historyJson =
+      prefs.getString('officecheck_attendance_history');
+
+      final List<dynamic> decoded = historyJson == null
+          ? <dynamic>[]
+          : jsonDecode(historyJson) as List<dynamic>;
+
+      final history = decoded
+          .whereType<Map>()
+          .map((item) => Map<String, dynamic>.from(item))
+          .toList();
+
+      final index = history.indexWhere(
+            (record) => record['date'] == today,
       );
 
+      late final Map<String, dynamic> record;
+      late final bool isCheckIn;
+
+      if (index == -1) {
+        // No record exists today: create the one allowed check-in.
+        record = <String, dynamic>{
+          'date': today,
+          'checkInTime': now.toIso8601String(),
+          'checkOutTime': null,
+          'status': 'incomplete',
+        };
+
+        history.add(record);
+        isCheckIn = true;
+      } else {
+        // A record exists today. Only checkout is allowed now.
+        record = history[index];
+
+        if (record['checkInTime'] == null) {
+          throw Exception('Invalid attendance record for today.');
+        }
+
+        if (record['checkOutTime'] != null) {
+          throw Exception('Attendance is already completed for today.');
+        }
+
+        record['checkOutTime'] = now.toIso8601String();
+        record['status'] = 'completed';
+
+        history[index] = record;
+        isCheckIn = false;
+      }
+
+      // Save all days, not just today's record.
+      await prefs.setString(
+        'officecheck_attendance_history',
+        jsonEncode(history),
+      );
+
+      // Update legacy keys in case other existing code uses them.
+      await prefs.setString('officecheck_date', today);
       await prefs.setBool(
         'officecheck_checked_in',
-        nextCheckedIn,
+        isCheckIn,
       );
 
-      if (nextCheckInTime != null) {
-        await prefs.setString(
-          'officecheck_check_in_time',
-          nextCheckInTime.toIso8601String(),
-        );
-      }
+      await prefs.setString(
+        'officecheck_check_in_time',
+        record['checkInTime'] as String,
+      );
 
-      if (nextCheckOutTime != null) {
+      if (record['checkOutTime'] != null) {
         await prefs.setString(
           'officecheck_check_out_time',
-          nextCheckOutTime.toIso8601String(),
+          record['checkOutTime'] as String,
         );
+      } else {
+        await prefs.remove('officecheck_check_out_time');
       }
+
+      if (!mounted) return;
+
+      await _loadAttendance();
 
       if (!mounted) return;
 
       setState(() {
         _position = position;
-        _isCheckedIn = nextCheckedIn;
-        _checkInTime = nextCheckInTime;
-        _checkOutTime = nextCheckOutTime;
-
-        _attendanceMessage = nextCheckedIn
+        _attendanceMessage = isCheckIn
             ? 'Check In recorded on this device.'
             : 'Check Out recorded on this device.';
       });
     } catch (error) {
       if (!mounted) return;
+
       setState(() {
-        _attendanceMessage = error.toString().replaceFirst('Exception: ', '');
+        _attendanceMessage =
+            error.toString().replaceFirst('Exception: ', '');
       });
     } finally {
       if (mounted) {
@@ -288,10 +348,10 @@ class _HomeScreenState extends State<HomeScreen> {
     final distance = _distanceMeters;
 
     return Scaffold(
-      backgroundColor: _background,
+      backgroundColor: AppColors.background,
       body: SafeArea(
         child: RefreshIndicator(
-          color: _blue,
+          color: AppColors.blue,
           onRefresh: _refreshLocation,
           child: ListView(
             padding: const EdgeInsets.fromLTRB(22, 18, 22, 30),
@@ -301,35 +361,26 @@ class _HomeScreenState extends State<HomeScreen> {
                   Container(
                     width: 44,
                     height: 44,
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(14),
-                      gradient: const LinearGradient(
-                        colors: [_blue, Color(0xFF164BC0)],
-                      ),
-                    ),
+                    decoration: Decorations.headerIconGradient,
                     child: const Icon(
                       Icons.location_on_rounded,
-                      color: Colors.white,
+                      color: AppColors.white,
                       size: 26,
                     ),
                   ),
-                  const SizedBox(width: 12),
+                  Sizes.gapW12,
                   const Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
                           'OfficeCheck',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 20,
-                            fontWeight: FontWeight.w700,
-                          ),
+                          style: TextStyles.appBarTitle,
                         ),
-                        SizedBox(height: 3),
+                        Sizes.gapH4,
                         Text(
                           'Your workplace, in range.',
-                          style: TextStyle(color: _muted, fontSize: 12),
+                          style: TextStyle(color: AppColors.muted, fontSize: 12),
                         ),
                       ],
                     ),
@@ -343,19 +394,19 @@ class _HomeScreenState extends State<HomeScreen> {
                       height: 20,
                       child: CircularProgressIndicator(
                         strokeWidth: 2,
-                        color: _cyan,
+                        color: AppColors.cyan,
                       ),
                     )
-                        : const Icon(Icons.refresh_rounded, color: _cyan),
+                        : const Icon(Icons.refresh_rounded, color: AppColors.cyan),
                   ),
                 ],
               ),
-              const SizedBox(height: 26),
+              Sizes.gapH26,
               _buildGeofenceCard(inside, distance),
-              const SizedBox(height: 18),
+              Sizes.gapH18,
               _buildAttendanceCard(),
               if (_locationMessage != null) ...[
-                const SizedBox(height: 16),
+                Sizes.gapH16,
                 _messageCard(
                   icon: Icons.info_outline_rounded,
                   message: _locationMessage!,
@@ -363,7 +414,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               ],
               if (_attendanceMessage != null) ...[
-                const SizedBox(height: 12),
+                Sizes.gapH12,
                 _messageCard(
                   icon: Icons.fact_check_outlined,
                   message: _attendanceMessage!,
@@ -372,17 +423,12 @@ class _HomeScreenState extends State<HomeScreen> {
                       _attendanceMessage!.contains('not configured'),
                 ),
               ],
-              const SizedBox(height: 26),
+              Sizes.gapH26,
               const Text(
                 'TODAY',
-                style: TextStyle(
-                  color: _muted,
-                  fontSize: 11,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: 1.5,
-                ),
+                style: TextStyles.sectionHeader,
               ),
-              const SizedBox(height: 12),
+              Sizes.gapH12,
               Row(
                 children: [
                   Expanded(
@@ -392,7 +438,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       icon: Icons.login_rounded,
                     ),
                   ),
-                  const SizedBox(width: 12),
+                  Sizes.gapW12,
                   Expanded(
                     child: _timeCard(
                       title: 'Check Out',
@@ -402,30 +448,104 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                 ],
               ),
-              const SizedBox(height: 24),
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: _panel,
-                  borderRadius: BorderRadius.circular(18),
-                  border: Border.all(
-                    color: Colors.white.withValues(alpha: 0.06),
+
+
+              Sizes.gapH24,
+              const Text(
+                'ATTENDANCE HISTORY',
+                style: TextStyles.sectionHeader,
+              ),
+              Sizes.gapH12,
+
+              if (_attendanceHistory.isEmpty)
+                const Text(
+                  'No attendance history yet.',
+                  style: TextStyle(
+                    color: AppColors.muted,
+                    fontSize: 12,
                   ),
-                ),
+                )
+              else
+                ..._attendanceHistory.map((record) {
+                  final checkIn = record['checkInTime'] == null
+                      ? null
+                      : DateTime.tryParse(
+                    record['checkInTime'] as String,
+                  );
+
+                  final checkOut = record['checkOutTime'] == null
+                      ? null
+                      : DateTime.tryParse(
+                    record['checkOutTime'] as String,
+                  );
+
+                  final date = record['date'] as String? ?? '';
+                  final completed = checkOut != null;
+
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: Container(
+                      padding: AppPaddings.all14,
+                      decoration: Decorations.panelCard(),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  date,
+                                  style: TextStyles.sectionTitle,
+                                ),
+                              ),
+                              Text(
+                                completed ? 'Completed' : 'Incomplete',
+                                style: TextStyle(
+                                  color: completed
+                                      ? AppColors.cyan
+                                      : const Color(0xFFFFC078),
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ],
+                          ),
+                          Sizes.gapH8,
+                          Text(
+                            'Check In: ${_formatTime(checkIn)}',
+                            style: const TextStyle(
+                              color: AppColors.muted,
+                              fontSize: 12,
+                            ),
+                          ),
+                          Sizes.gapH4,
+                          Text(
+                            'Check Out: ${_formatTime(checkOut)}',
+                            style: const TextStyle(
+                              color: AppColors.muted,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                }),
+
+              Sizes.gapH24,
+              Container(
+                padding: AppPaddings.all16,
+                decoration: Decorations.panelCard(),
                 child: const Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Icon(Icons.shield_outlined, color: _cyan, size: 22),
-                    SizedBox(width: 12),
+                    Icon(Icons.shield_outlined, color: AppColors.cyan, size: 22),
+                    Sizes.gapW12,
                     Expanded(
                       child: Text(
                         'Attendance is allowed only after a fresh location '
                             'check confirms you are within the office boundary.',
-                        style: TextStyle(
-                          color: _muted,
-                          fontSize: 12,
-                          height: 1.55,
-                        ),
+                        style: TextStyles.bodySmall12,
                       ),
                     ),
                   ],
@@ -440,9 +560,9 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildGeofenceCard(bool inside, double? distance) {
     final statusColor = !_officeConfigured
-        ? _muted
+        ? AppColors.muted
         : inside
-        ? _cyan
+        ? AppColors.cyan
         : const Color(0xFFFFC078);
 
     final statusText = !_officeConfigured
@@ -452,16 +572,8 @@ class _HomeScreenState extends State<HomeScreen> {
         : 'You are outside the office zone';
 
     return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(24),
-        gradient: const LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [Color(0xFF14345A), Color(0xFF0D2038)],
-        ),
-        border: Border.all(color: _blue.withValues(alpha: 0.35)),
-      ),
+      padding: AppPaddings.all20,
+      decoration: Decorations.proximityCard,
       child: Column(
         children: [
           Row(
@@ -469,12 +581,7 @@ class _HomeScreenState extends State<HomeScreen> {
               const Expanded(
                 child: Text(
                   'OFFICE PROXIMITY',
-                  style: TextStyle(
-                    color: _muted,
-                    fontSize: 11,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: 1.3,
-                  ),
+                  style: TextStyles.sectionHeader,
                 ),
               ),
               Container(
@@ -482,15 +589,12 @@ class _HomeScreenState extends State<HomeScreen> {
                   horizontal: 10,
                   vertical: 6,
                 ),
-                decoration: BoxDecoration(
-                  color: statusColor.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(20),
-                ),
+                decoration: Decorations.statusPill(statusColor),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Icon(Icons.circle, color: statusColor, size: 7),
-                    const SizedBox(width: 6),
+                    Sizes.gapW4,
                     Text(
                       inside && _officeConfigured ? 'IN RANGE' : 'STATUS',
                       style: TextStyle(
@@ -504,7 +608,7 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ],
           ),
-          const SizedBox(height: 20),
+          Sizes.gapH20,
           SizedBox(
             width: 170,
             height: 170,
@@ -514,79 +618,57 @@ class _HomeScreenState extends State<HomeScreen> {
                 Container(
                   width: 164,
                   height: 164,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    border: Border.all(
-                      color: _blue.withValues(alpha: 0.3),
-                    ),
+                  decoration: Decorations.concentricCircle(
+                    borderColor: AppColors.blue.withValues(alpha: 0.3),
                   ),
                 ),
                 Container(
                   width: 126,
                   height: 126,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: _cyan.withValues(alpha: 0.05),
-                    border: Border.all(
-                      color: _cyan.withValues(alpha: 0.4),
-                    ),
+                  decoration: Decorations.concentricCircle(
+                    borderColor: AppColors.cyan.withValues(alpha: 0.4),
+                    fillColor: AppColors.cyan.withValues(alpha: 0.05),
                   ),
                 ),
                 Container(
                   width: 82,
                   height: 82,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    gradient: const LinearGradient(
-                      colors: [_blue, Color(0xFF164BC0)],
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: _blue.withValues(alpha: 0.28),
-                        blurRadius: 24,
-                      ),
-                    ],
-                  ),
+                  decoration: Decorations.circularHeroIcon,
                   child: const Icon(
                     Icons.my_location_rounded,
-                    color: Colors.white,
+                    color: AppColors.white,
                     size: 38,
                   ),
                 ),
               ],
             ),
           ),
-          const SizedBox(height: 14),
+          Sizes.gapH14,
           Text(
             distance == null ? '-- m' : '${distance.round()} m',
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 36,
-              fontWeight: FontWeight.w700,
-              letterSpacing: -1,
-            ),
+            style: TextStyles.metricLarge,
           ),
-          const SizedBox(height: 5),
+          Sizes.gapH4,
           Text(
             statusText,
             textAlign: TextAlign.center,
             style: TextStyle(color: statusColor, fontSize: 13),
           ),
-          const SizedBox(height: 18),
+          Sizes.gapH18,
           Row(
             children: [
-              const Icon(Icons.radio_button_checked, color: _cyan, size: 16),
-              const SizedBox(width: 7),
+              const Icon(Icons.radio_button_checked, color: AppColors.cyan, size: Sizes.iconSm),
+              Sizes.gapW8,
               const Expanded(
                 child: Text(
                   'Office boundary',
-                  style: TextStyle(color: _muted, fontSize: 12),
+                  style: TextStyle(color: AppColors.muted, fontSize: 12),
                 ),
               ),
               const Text(
-                '150 m radius',
+                '50 m radius',
                 style: TextStyle(
-                  color: Colors.white,
+                  color: AppColors.white,
                   fontSize: 12,
                   fontWeight: FontWeight.w600,
                 ),
@@ -600,55 +682,45 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildAttendanceCard() {
     final checkedIn = _isCheckedIn;
+    final completedToday =
+        _checkInTime != null && _checkOutTime != null;
 
     return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: _panel,
-        borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.06)),
-      ),
+      padding: AppPaddings.all20,
+      decoration: Decorations.panelCard22,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Text(
             'ATTENDANCE',
-            style: TextStyle(
-              color: _muted,
-              fontSize: 11,
-              fontWeight: FontWeight.w700,
-              letterSpacing: 1.3,
-            ),
+            style: TextStyles.sectionHeader,
           ),
-          const SizedBox(height: 12),
+          Sizes.gapH12,
           Row(
             children: [
               Icon(
                 checkedIn ? Icons.check_circle_rounded : Icons.schedule_rounded,
-                color: checkedIn ? _cyan : _muted,
+                color: checkedIn ? AppColors.cyan : AppColors.muted,
                 size: 25,
               ),
-              const SizedBox(width: 10),
+              Sizes.gapW10,
               Expanded(
                 child: Text(
                   checkedIn ? 'You are checked in' : 'Not checked in yet',
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 17,
-                    fontWeight: FontWeight.w600,
-                  ),
+                  style: TextStyles.sectionTitle,
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 18),
+          Sizes.gapH18,
           SizedBox(
             width: double.infinity,
-            height: 54,
+            height: Sizes.buttonHeight,
             child: FilledButton.icon(
               onPressed: _isSubmittingAttendance ||
                   _isLoadingLocation ||
-                  !_officeConfigured
+                  !_officeConfigured ||
+                  completedToday
                   ? null
                   : _handleAttendanceAction,
               icon: _isSubmittingAttendance
@@ -657,7 +729,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 height: 18,
                 child: CircularProgressIndicator(
                   strokeWidth: 2,
-                  color: Colors.white,
+                  color: AppColors.white,
                 ),
               )
                   : Icon(
@@ -666,6 +738,8 @@ class _HomeScreenState extends State<HomeScreen> {
               label: Text(
                 _isSubmittingAttendance
                     ? 'Checking location...'
+                    : completedToday
+                    ? 'Completed for today'
                     : checkedIn
                     ? 'Check Out'
                     : 'Check In',
@@ -673,11 +747,11 @@ class _HomeScreenState extends State<HomeScreen> {
               style: FilledButton.styleFrom(
                 backgroundColor: checkedIn
                     ? const Color(0xFF263B54)
-                    : _blue,
-                disabledBackgroundColor: _blue.withValues(alpha: 0.25),
-                foregroundColor: Colors.white,
+                    : AppColors.blue,
+                disabledBackgroundColor: AppColors.blue.withValues(alpha: 0.25),
+                foregroundColor: AppColors.white,
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(15),
+                  borderRadius: Sizes.radius16,
                 ),
                 textStyle: const TextStyle(
                   fontSize: 15,
@@ -687,11 +761,10 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           ),
           if (!_officeConfigured) ...[
-            const SizedBox(height: 10),
+            Sizes.gapH10,
             const Text(
-              'Attendance actions will be enabled after the office '
-                  'coordinates are configured.',
-              style: TextStyle(color: _muted, fontSize: 11, height: 1.5),
+              'Attendance actions will be enabled after the office coordinates are configured.',
+              style: TextStyle(color: AppColors.muted, fontSize: 11, height: 1.5),
             ),
           ],
         ],
@@ -705,26 +778,18 @@ class _HomeScreenState extends State<HomeScreen> {
     required IconData icon,
   }) {
     return Container(
-      padding: const EdgeInsets.all(15),
-      decoration: BoxDecoration(
-        color: _panel,
-        borderRadius: BorderRadius.circular(17),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
-      ),
+      padding: AppPaddings.card,
+      decoration: Decorations.panelCard(),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, color: _cyan, size: 20),
-          const SizedBox(height: 12),
-          Text(title, style: const TextStyle(color: _muted, fontSize: 12)),
-          const SizedBox(height: 5),
+          Icon(icon, color: AppColors.cyan, size: Sizes.iconMd),
+          Sizes.gapH12,
+          Text(title, style: const TextStyle(color: AppColors.muted, fontSize: 12)),
+          Sizes.gapH4,
           Text(
             time,
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 18,
-              fontWeight: FontWeight.w700,
-            ),
+            style: TextStyles.timeDisplay,
           ),
         ],
       ),
@@ -736,20 +801,16 @@ class _HomeScreenState extends State<HomeScreen> {
     required String message,
     required bool warning,
   }) {
-    final color = warning ? const Color(0xFFFFC078) : _cyan;
+    final color = warning ? const Color(0xFFFFC078) : AppColors.cyan;
 
     return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.08),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: color.withValues(alpha: 0.25)),
-      ),
+      padding: AppPaddings.all14,
+      decoration: Decorations.messageCard(color),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Icon(icon, color: color, size: 19),
-          const SizedBox(width: 10),
+          Sizes.gapW10,
           Expanded(
             child: Text(
               message,

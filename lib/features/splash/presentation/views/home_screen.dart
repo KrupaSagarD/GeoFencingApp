@@ -18,7 +18,7 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen>
     with WidgetsBindingObserver {
-  static const double _geofenceRadiusMeters = 150;
+  static const double _geofenceRadiusMeters = 100;
   static const double officeLatitude = 12.9328497;
   static const double officeLongitude = 77.5400525;
 
@@ -32,11 +32,8 @@ class _HomeScreenState extends State<HomeScreen>
   bool _isSubmittingAttendance = false;
   bool _isCheckedIn = false;
 
-  DateTime? _checkInTime;
-  DateTime? _checkOutTime;
 
   String? _locationMessage;
-  String? _attendanceMessage;
 
   List<Map<String, dynamic>> _todaySessions = [];
 
@@ -283,8 +280,6 @@ class _HomeScreenState extends State<HomeScreen>
       setState(() {
         _todaySessions = sessions;
         _isCheckedIn = active != null;
-        _checkInTime = _parseTime(checkInValue);
-        _checkOutTime = _parseTime(checkOutValue);
       });
     } catch (error, stackTrace) {
       debugPrint('Failed to load attendance: $error');
@@ -378,7 +373,6 @@ class _HomeScreenState extends State<HomeScreen>
 
     if (!_officeConfigured) {
       setState(() {
-        _attendanceMessage = l10n.officeNotConfiguredWarning;
       });
       return;
     }
@@ -387,7 +381,6 @@ class _HomeScreenState extends State<HomeScreen>
 
     setState(() {
       _isSubmittingAttendance = true;
-      _attendanceMessage = null;
     });
 
     try {
@@ -526,23 +519,31 @@ class _HomeScreenState extends State<HomeScreen>
 
       if (!mounted) return;
 
+      final message = checkedIn ? l10n.checkInRecorded : l10n.checkOutRecorded;
+
       setState(() {
         _position = position;
         _todaySessions = sessions;
         _isCheckedIn = checkedIn;
-        _checkInTime = _parseTime(latest['checkInTime']);
-        _checkOutTime = _parseTime(latest['checkOutTime']);
-        _attendanceMessage = checkedIn
-            ? l10n.checkInRecorded
-            : l10n.checkOutRecorded;
       });
+
+      _showAttendanceDialog(
+        title: checkedIn ? l10n.checkIn : l10n.checkOut,
+        message: message,
+        isSuccess: true,
+      );
     } catch (error) {
       if (!mounted) return;
 
+      final errorMsg = error.toString().replaceFirst('Exception: ', '');
       setState(() {
-        _attendanceMessage =
-            error.toString().replaceFirst('Exception: ', '');
       });
+
+      _showAttendanceDialog(
+        title: 'Attendance Alert',
+        message: errorMsg,
+        isSuccess: false,
+      );
     } finally {
       if (mounted) {
         setState(() {
@@ -550,6 +551,89 @@ class _HomeScreenState extends State<HomeScreen>
         });
       }
     }
+  }
+
+  void _showAttendanceDialog({
+    required String title,
+    required String message,
+    required bool isSuccess,
+  }) {
+    showDialog<void>(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          backgroundColor: AppColors.panel,
+          shape: RoundedRectangleBorder(
+            borderRadius: Sizes.radius20,
+          ),
+          contentPadding: AppPaddings.all24,
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 58,
+                height: 58,
+                decoration: BoxDecoration(
+                  color: isSuccess ? const Color(0xFFF0FDF4) : const Color(0xFFFEF2F2),
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: isSuccess ? const Color(0xFFBBF7D0) : const Color(0xFFFECACA),
+                    width: 1.5,
+                  ),
+                ),
+                child: Icon(
+                  isSuccess ? Icons.check_circle_rounded : Icons.info_outline_rounded,
+                  color: isSuccess ? AppColors.success : const Color(0xFFDC2626),
+                  size: 32,
+                ),
+              ),
+              Sizes.gapH16,
+              Text(
+                title,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  color: AppColors.textPrimary,
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              Sizes.gapH8,
+              Text(
+                message,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  color: AppColors.textSecondary,
+                  fontSize: 14,
+                  height: 1.4,
+                ),
+              ),
+              Sizes.gapH20,
+              SizedBox(
+                width: double.infinity,
+                child: FilledButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  style: FilledButton.styleFrom(
+                    backgroundColor: isSuccess ? AppColors.blue : const Color(0xFF334155),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: Sizes.radius12,
+                    ),
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                  ),
+                  child: const Text(
+                    'OK',
+                    style: TextStyle(
+                      color: AppColors.white,
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
   }
 
   String _formatTime(DateTime? value) {
@@ -675,16 +759,6 @@ class _HomeScreenState extends State<HomeScreen>
                   isWarning: !_officeConfigured,
                 ),
               ],
-              if (_attendanceMessage != null) ...[
-                Sizes.gapH12,
-                FeedbackMessageCard(
-                  icon: Icons.fact_check_outlined,
-                  message: _attendanceMessage!,
-                  isWarning:
-                  _attendanceMessage!.toLowerCase().contains('outside') ||
-                      _attendanceMessage!.toLowerCase().contains('not'),
-                ),
-              ],
               // Today's attendance sessions and total duration.
               Sizes.gapH24,
               Container(
@@ -794,7 +868,7 @@ class _HomeScreenState extends State<HomeScreen>
 
                     if (_todaySessions.isEmpty)
                       Container(
-                        padding: const EdgeInsets.symmetric(vertical: 28, horizontal: 16),
+                        padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
                         alignment: Alignment.center,
                         decoration: BoxDecoration(
                           color: const Color(0xFFFAFAFA),
@@ -804,29 +878,65 @@ class _HomeScreenState extends State<HomeScreen>
                             strokeAlign: BorderSide.strokeAlignCenter,
                           ),
                         ),
-                        child: Column(
+                        child: Text(
+                          l10n.noAttendanceSessionsYet,
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(
+                            color: AppColors.textSecondary,
+                            fontSize: 13,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      )
+                    else ...[
+                      // Compact Table Header
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF1F5F9),
+                          borderRadius: Sizes.radius12,
+                        ),
+                        child: const Row(
                           children: [
-                            const Icon(
-                              Icons.history_toggle_off_rounded,
-                              size: 40,
-                              color: AppColors.textSubtle,
+                            Expanded(
+                              flex: 3,
+                              child: Text(
+                                'Check In',
+                                style: TextStyle(
+                                  color: AppColors.textSecondary,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
                             ),
-                            Sizes.gapH10,
-                            Text(
-                              l10n.noAttendanceSessionsYet,
-                              textAlign: TextAlign.center,
-                              style: const TextStyle(
-                                color: AppColors.textSecondary,
-                                fontSize: 13,
-                                fontWeight: FontWeight.w500,
+                            Expanded(
+                              flex: 3,
+                              child: Text(
+                                'Check Out',
+                                style: TextStyle(
+                                  color: AppColors.textSecondary,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ),
+                            Expanded(
+                              flex: 2,
+                              child: Text(
+                                'Duration',
+                                textAlign: TextAlign.end,
+                                style: TextStyle(
+                                  color: AppColors.textSecondary,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w700,
+                                ),
                               ),
                             ),
                           ],
                         ),
-                      )
-                    else
+                      ),
+                      Sizes.gapH8,
                       ..._todaySessions.asMap().entries.map((entry) {
-                        final index = entry.key;
                         final session = entry.value;
 
                         final checkIn = _parseTime(session['checkInTime']);
@@ -839,17 +949,77 @@ class _HomeScreenState extends State<HomeScreen>
 
                         final isAutoGeofence = session['checkOutType'] == 'geofence';
 
-                        return SessionTimelineCard(
-                          sessionNumber: index + 1,
-                          checkInFormatted: _formatTime(checkIn),
-                          checkOutFormatted: isCompleted
-                              ? _formatTime(checkOut)
-                              : l10n.activeSession,
-                          durationFormatted: _formatDuration(duration),
-                          isCompleted: isCompleted,
-                          isAutoGeofence: isAutoGeofence,
+                        return Container(
+                          margin: const EdgeInsets.symmetric(vertical: 3),
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                          decoration: BoxDecoration(
+                            color: AppColors.panel,
+                            borderRadius: Sizes.radius12,
+                            border: Border.all(
+                              color: isCompleted
+                                  ? AppColors.borderSubtle
+                                  : const Color(0xFFBFDBFE),
+                            ),
+                          ),
+                          child: Row(
+                            children: [
+                              Expanded(
+                                flex: 3,
+                                child: Text(
+                                  _formatTime(checkIn),
+                                  style: const TextStyle(
+                                    color: AppColors.textPrimary,
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ),
+                              Expanded(
+                                flex: 3,
+                                child: Row(
+                                  children: [
+                                    Text(
+                                      isCompleted
+                                          ? _formatTime(checkOut)
+                                          : l10n.activeSession,
+                                      style: TextStyle(
+                                        color: isCompleted
+                                            ? AppColors.textPrimary
+                                            : const Color(0xFFD97706),
+                                        fontSize: 13,
+                                        fontWeight: isCompleted
+                                            ? FontWeight.w600
+                                            : FontWeight.w700,
+                                      ),
+                                    ),
+                                    if (isAutoGeofence) ...[
+                                      const SizedBox(width: 4),
+                                      const Icon(
+                                        Icons.radar_rounded,
+                                        size: 13,
+                                        color: AppColors.blue,
+                                      ),
+                                    ],
+                                  ],
+                                ),
+                              ),
+                              Expanded(
+                                flex: 2,
+                                child: Text(
+                                  _formatDuration(duration),
+                                  textAlign: TextAlign.end,
+                                  style: const TextStyle(
+                                    color: AppColors.blue,
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
                         );
                       }),
+                    ],
                   ],
                 ),
               ),

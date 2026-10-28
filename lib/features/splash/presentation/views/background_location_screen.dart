@@ -191,8 +191,8 @@ class _BackgroundLocationScreenState extends State<BackgroundLocationScreen>
                   Sizes.gapH32,
                   Center(
                     child: Container(
-                      width: 170,
-                      height: 170,
+                      width: 120,
+                      height: 120,
                       decoration: Decorations.concentricCircle(
                         borderColor: const Color(0xFFBFDBFE),
                         fillColor: const Color(0xFFEFF6FF),
@@ -201,7 +201,7 @@ class _BackgroundLocationScreenState extends State<BackgroundLocationScreen>
                         enabled
                             ? Icons.verified_user_rounded
                             : Icons.location_on_rounded,
-                        size: 78,
+                        size: 60,
                         color: AppColors.blue,
                       ),
                     ),

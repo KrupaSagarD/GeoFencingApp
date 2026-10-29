@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../../core/contants/constants.dart';
-import '../../../../core/localization/app_localizations.dart';
+import '../../../../l10n/generated/app_localizations.dart';
+import '../../../location/data/services/attendance_service.dart';
 import '../../../location/data/services/geofencing_service.dart';
 
 class BackgroundLocationScreen extends StatefulWidget {
@@ -102,17 +102,9 @@ class _BackgroundLocationScreenState extends State<BackgroundLocationScreen>
   }
 
   Future<void> _handleOfficeExit(DateTime eventTime) async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setBool('officecheck_checked_in', false);
-      await prefs.setString(
-        'officecheck_check_out_time',
-        eventTime.toLocal().toIso8601String(),
-      );
-      debugPrint('BackgroundLocationScreen: exit recorded at $eventTime');
-    } catch (e) {
-      debugPrint('Error handling office exit in background: $e');
-    }
+    debugPrint('BackgroundLocationScreen: geofence exit at $eventTime → auto checkout');
+    final success = await AttendanceService.autoCheckout(eventTime);
+    debugPrint('AttendanceService.autoCheckout result: $success');
   }
 
   void _continueToHome() {
@@ -129,7 +121,6 @@ class _BackgroundLocationScreenState extends State<BackgroundLocationScreen>
       );
     }
 
-    // Register geofencing asynchronously in background without delaying navigation
     _geofencingService.start(
       latitude: _officeLatitude,
       longitude: _officeLongitude,

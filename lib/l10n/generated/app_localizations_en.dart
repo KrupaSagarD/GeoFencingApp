@@ -40,7 +40,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get preciseLocationSubtitle =>
-      'Check whether you are within 150 m of your office.';
+      'Check whether you are within 100 m of your office.';
 
   @override
   String get statusServicesOff => 'Services off';
@@ -272,7 +272,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get officeBoundary => 'Office boundary';
 
   @override
-  String get radiusMeters => '150 m radius';
+  String get radiusMeters => '100 m radius';
 
   @override
   String get attendanceSection => 'ATTENDANCE';
@@ -334,7 +334,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get outsideBoundaryError =>
-      'You are outside the 150 m office boundary. Attendance was not recorded.';
+      'You are outside the 100 m office boundary. Attendance was not recorded.';
 
   @override
   String get setOfficeCoordinates =>

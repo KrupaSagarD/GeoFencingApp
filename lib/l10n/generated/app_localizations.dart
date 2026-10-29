@@ -6,6 +6,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:intl/intl.dart' as intl;
 
 import 'app_localizations_en.dart';
+import 'app_localizations_ja.dart';
 
 // ignore_for_file: type=lint
 
@@ -17,7 +18,7 @@ import 'app_localizations_en.dart';
 /// `supportedLocales` list. For example:
 ///
 /// ```dart
-/// import 'l10n/app_localizations.dart';
+/// import 'generated/app_localizations.dart';
 ///
 /// return MaterialApp(
 ///   localizationsDelegates: AppLocalizations.localizationsDelegates,
@@ -66,8 +67,8 @@ abstract class AppLocalizations {
 
   final String localeName;
 
-  static AppLocalizations? of(BuildContext context) {
-    return Localizations.of<AppLocalizations>(context, AppLocalizations);
+  static AppLocalizations of(BuildContext context) {
+    return Localizations.of<AppLocalizations>(context, AppLocalizations)!;
   }
 
   static const LocalizationsDelegate<AppLocalizations> delegate =
@@ -92,7 +93,10 @@ abstract class AppLocalizations {
       ];
 
   /// A list of this localizations delegate's supported locales.
-  static const List<Locale> supportedLocales = <Locale>[Locale('en')];
+  static const List<Locale> supportedLocales = <Locale>[
+    Locale('en'),
+    Locale('ja'),
+  ];
 
   /// No description provided for @appTitle.
   ///
@@ -151,7 +155,7 @@ abstract class AppLocalizations {
   /// No description provided for @preciseLocationSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'Check whether you are within 150 m of your office.'**
+  /// **'Check whether you are within 100 m of your office.'**
   String get preciseLocationSubtitle;
 
   /// No description provided for @statusServicesOff.
@@ -565,7 +569,7 @@ abstract class AppLocalizations {
   /// No description provided for @radiusMeters.
   ///
   /// In en, this message translates to:
-  /// **'150 m radius'**
+  /// **'100 m radius'**
   String get radiusMeters;
 
   /// No description provided for @attendanceSection.
@@ -673,7 +677,7 @@ abstract class AppLocalizations {
   /// No description provided for @outsideBoundaryError.
   ///
   /// In en, this message translates to:
-  /// **'You are outside the 150 m office boundary. Attendance was not recorded.'**
+  /// **'You are outside the 100 m office boundary. Attendance was not recorded.'**
   String get outsideBoundaryError;
 
   /// No description provided for @setOfficeCoordinates.
@@ -748,7 +752,7 @@ class _AppLocalizationsDelegate
 
   @override
   bool isSupported(Locale locale) =>
-      <String>['en'].contains(locale.languageCode);
+      <String>['en', 'ja'].contains(locale.languageCode);
 
   @override
   bool shouldReload(_AppLocalizationsDelegate old) => false;
@@ -759,6 +763,8 @@ AppLocalizations lookupAppLocalizations(Locale locale) {
   switch (locale.languageCode) {
     case 'en':
       return AppLocalizationsEn();
+    case 'ja':
+      return AppLocalizationsJa();
   }
 
   throw FlutterError(

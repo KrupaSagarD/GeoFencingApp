@@ -1,8 +1,10 @@
+
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 
 import '../../../../core/contants/constants.dart';
-import '../../../../core/localization/app_localizations.dart';
+import '../../../../core/localization/app_locale.dart';
+import '../../../../l10n/generated/app_localizations.dart';
 import 'background_location_screen.dart';
 import 'get_notified_screen.dart';
 import 'home_screen.dart';
@@ -11,10 +13,12 @@ class LocationPermissionScreen extends StatefulWidget {
   const LocationPermissionScreen({super.key});
 
   @override
-  State<LocationPermissionScreen> createState() => _LocationPermissionScreenState();
+  State<LocationPermissionScreen> createState() =>
+      _LocationPermissionScreenState();
 }
 
-class _LocationPermissionScreenState extends State<LocationPermissionScreen>
+class _LocationPermissionScreenState
+    extends State<LocationPermissionScreen>
     with WidgetsBindingObserver {
   LocationPermission? _permission;
   bool _locationServicesEnabled = false;
@@ -22,7 +26,8 @@ class _LocationPermissionScreenState extends State<LocationPermissionScreen>
   String? _errorMessage;
 
   bool get _hasLocationPermission =>
-      _permission == LocationPermission.whileInUse || _permission == LocationPermission.always;
+      _permission == LocationPermission.whileInUse ||
+          _permission == LocationPermission.always;
 
   @override
   void initState() {
@@ -45,28 +50,46 @@ class _LocationPermissionScreenState extends State<LocationPermissionScreen>
   }
 
   Future<void> _checkPermission() async {
-    final results = await Future.wait<Object>([
-      Geolocator.checkPermission(),
-      Geolocator.isLocationServiceEnabled(),
-    ]);
+    try {
+      final results = await Future.wait<Object>([
+        Geolocator.checkPermission(),
+        Geolocator.isLocationServiceEnabled(),
+      ]);
+
+      if (!mounted) return;
+
+      setState(() {
+        _permission = results[0] as LocationPermission;
+        _locationServicesEnabled = results[1] as bool;
+      });
+    } catch (error) {
+      debugPrint('Permission check failed: $error');
+    }
+  }
+
+  Future<void> _changeLanguage(String? languageCode) async {
+    if (languageCode == null) return;
+
+    await AppLocale.changeLocale(languageCode);
 
     if (!mounted) return;
 
     setState(() {
-      _permission = results[0] as LocationPermission;
-      _locationServicesEnabled = results[1] as bool;
+      _errorMessage = null;
     });
   }
 
   Future<void> _requestLocationPermission() async {
     final l10n = AppLocalizations.of(context);
+
     setState(() {
       _isRequesting = true;
       _errorMessage = null;
     });
 
     try {
-      final serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      final serviceEnabled =
+      await Geolocator.isLocationServiceEnabled();
 
       if (!serviceEnabled) {
         if (mounted) {
@@ -105,8 +128,8 @@ class _LocationPermissionScreenState extends State<LocationPermissionScreen>
           _errorMessage = l10n.locationDeniedError;
         });
       }
-    } catch (e, stackTrace) {
-      debugPrint('Location permission error: $e');
+    } catch (error, stackTrace) {
+      debugPrint('Location permission error: $error');
       debugPrintStack(stackTrace: stackTrace);
 
       if (mounted) {
@@ -142,7 +165,6 @@ class _LocationPermissionScreenState extends State<LocationPermissionScreen>
   }
 
   void _showBackgroundInfo() {
-    final l10n = AppLocalizations.of(context);
     showModalBottomSheet<void>(
       context: context,
       backgroundColor: AppColors.panel,
@@ -150,6 +172,8 @@ class _LocationPermissionScreenState extends State<LocationPermissionScreen>
         borderRadius: Sizes.radiusBottomSheet,
       ),
       builder: (context) {
+        final sheetL10n = AppLocalizations.of(context);
+
         return SafeArea(
           child: Padding(
             padding: AppPaddings.bottomSheet,
@@ -164,25 +188,72 @@ class _LocationPermissionScreenState extends State<LocationPermissionScreen>
                 ),
                 Sizes.gapH18,
                 Text(
-                  l10n.whyBackgroundLocationTitle,
+                  sheetL10n.whyBackgroundLocationTitle,
                   style: TextStyles.titleLarge,
                 ),
                 Sizes.gapH12,
                 Text(
-                  l10n.whyBackgroundLocationDesc1,
+                  sheetL10n.whyBackgroundLocationDesc1,
                   style: TextStyles.bodyMedium,
                 ),
                 Sizes.gapH12,
                 Text(
-                  l10n.whyBackgroundLocationDesc2,
+                  sheetL10n.whyBackgroundLocationDesc2,
                   style: TextStyles.bodyMedium,
                 ),
                 Sizes.gapH24,
                 AppPrimaryButton(
-                  text: l10n.gotIt,
+                  text: sheetL10n.gotIt,
                   onPressed: () => Navigator.pop(context),
                 ),
               ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildLanguageSelector() {
+    return ValueListenableBuilder<Locale>(
+      valueListenable: AppLocale.locale,
+      builder: (context, locale, _) {
+        return Align(
+          alignment: Alignment.centerRight,
+          child: Container(
+            padding: const EdgeInsets.symmetric(
+              horizontal: 12,
+              vertical: 2,
+            ),
+            decoration: BoxDecoration(
+              color: AppColors.panel,
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(
+                color: AppColors.blue.withValues(alpha: 0.35),
+              ),
+            ),
+            child: DropdownButtonHideUnderline(
+              child: DropdownButton<String>(
+                value: locale.languageCode,
+                dropdownColor: AppColors.panel,
+                icon: const Icon(
+                  Icons.language_rounded,
+                  color: AppColors.blue,
+                ),
+                style: TextStyles.bodyMedium,
+                borderRadius: BorderRadius.circular(12),
+                items: const [
+                  DropdownMenuItem(
+                    value: 'en',
+                    child: Text('English'),
+                  ),
+                  DropdownMenuItem(
+                    value: 'ja',
+                    child: Text('日本語'),
+                  ),
+                ],
+                onChanged: _changeLanguage,
+              ),
             ),
           ),
         );
@@ -194,7 +265,8 @@ class _LocationPermissionScreenState extends State<LocationPermissionScreen>
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
 
-    final buttonText = _hasLocationPermission && _locationServicesEnabled
+    final buttonText = _hasLocationPermission &&
+        _locationServicesEnabled
         ? l10n.locationAccessEnabled
         : (_hasLocationPermission && !_locationServicesEnabled)
         ? l10n.enableDeviceLocation
@@ -233,29 +305,31 @@ class _LocationPermissionScreenState extends State<LocationPermissionScreen>
               child: SingleChildScrollView(
                 padding: AppPaddings.screen,
                 child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: Sizes.maxContentWidth),
+                  constraints: const BoxConstraints(
+                    maxWidth: Sizes.maxContentWidth,
+                  ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
+                      _buildLanguageSelector(),
+                      Sizes.gapH20,
                       const PermissionHeroIllustration(
                         centerIcon: Icons.location_on_rounded,
                         badgeIcon: Icons.verified_user_rounded,
                       ),
                       Sizes.gapH20,
-
                       Text(
                         l10n.stayInTheLoop,
                         textAlign: TextAlign.center,
                         style: TextStyles.headline,
                       ),
-
                       Sizes.gapH20,
-
                       PermissionItemRow(
                         icon: Icons.my_location_rounded,
                         title: l10n.preciseLocationTitle,
                         subtitle: l10n.preciseLocationSubtitle,
-                        isGranted: _hasLocationPermission && _locationServicesEnabled,
+                        isGranted: _hasLocationPermission &&
+                            _locationServicesEnabled,
                         trailingText: preciseStatus,
                       ),
                       Sizes.gapH12,
@@ -274,25 +348,26 @@ class _LocationPermissionScreenState extends State<LocationPermissionScreen>
                         isGranted: false,
                         trailingText: l10n.statusSetupNext,
                       ),
-
                       if (_errorMessage != null) ...[
                         Sizes.gapH18,
                         AppErrorBanner(message: _errorMessage!),
                       ],
-
                       Sizes.gapH26,
-
                       AppPrimaryButton(
                         text: buttonText,
                         isLoading: _isRequesting,
-                        icon: _hasLocationPermission && _locationServicesEnabled
+                        icon: _hasLocationPermission &&
+                            _locationServicesEnabled
                             ? Icons.check_circle_outline
-                            : (_hasLocationPermission && !_locationServicesEnabled)
+                            : (_hasLocationPermission &&
+                            !_locationServicesEnabled)
                             ? Icons.location_off_rounded
-                            : _permission == LocationPermission.deniedForever
+                            : _permission ==
+                            LocationPermission.deniedForever
                             ? Icons.settings_outlined
                             : Icons.location_on_rounded,
-                        onPressed: (_hasLocationPermission && _locationServicesEnabled)
+                        onPressed: _hasLocationPermission &&
+                            _locationServicesEnabled
                             ? () {
                           Navigator.of(context).push(
                             MaterialPageRoute<void>(
@@ -300,15 +375,18 @@ class _LocationPermissionScreenState extends State<LocationPermissionScreen>
                                 onContinue: () {
                                   Navigator.of(context).push(
                                     MaterialPageRoute<void>(
-                                      builder: (_) => BackgroundLocationScreen(
-                                        onContinue: () {
-                                          Navigator.of(context).pushReplacement(
-                                            MaterialPageRoute<void>(
-                                              builder: (_) => const HomeScreen(),
-                                            ),
-                                          );
-                                        },
-                                      ),
+                                      builder: (_) =>
+                                          BackgroundLocationScreen(
+                                            onContinue: () {
+                                              Navigator.of(context)
+                                                  .pushReplacement(
+                                                MaterialPageRoute<void>(
+                                                  builder: (_) =>
+                                                  const HomeScreen(),
+                                                ),
+                                              );
+                                            },
+                                          ),
                                     ),
                                   );
                                 },
@@ -318,9 +396,7 @@ class _LocationPermissionScreenState extends State<LocationPermissionScreen>
                         }
                             : _handleLocationButton,
                       ),
-
                       Sizes.gapH16,
-
                       TextButton(
                         onPressed: _showBackgroundInfo,
                         child: Text(
@@ -328,9 +404,7 @@ class _LocationPermissionScreenState extends State<LocationPermissionScreen>
                           style: TextStyles.cyanLink,
                         ),
                       ),
-
                       Sizes.gapH18,
-
                       Text(
                         l10n.locationAttendanceNotice,
                         textAlign: TextAlign.center,

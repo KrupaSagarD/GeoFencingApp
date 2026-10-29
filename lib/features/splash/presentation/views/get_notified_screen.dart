@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:permission_handler/permission_handler.dart';
 
 import '../../../../core/contants/constants.dart';
-import '../../../../core/localization/app_localizations.dart';
+import '../../../../l10n/generated/app_localizations.dart';
 
 class GetNotifiedScreen extends StatefulWidget {
   const GetNotifiedScreen({super.key, this.onContinue});

@@ -7,7 +7,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'core/contants/colors.dart';
 import 'core/localization/app_locale.dart';
 import 'features/splash/presentation/views/location_access_screen.dart';
-import 'features/splash/presentation/views/location_permission_screen.dart';
 import 'features/splash/presentation/views/splash_screen.dart';
 import 'l10n/generated/app_localizations.dart';
 

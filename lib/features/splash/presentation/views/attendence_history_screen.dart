@@ -28,7 +28,7 @@ class _AttendanceHistoryScreenState
   List<Map<String, dynamic>> _records = [];
   bool _isLoading = true;
 
-  AppLocalizations get l10n => AppLocalizations.of(context)!;
+  AppLocalizations get l10n => AppLocalizations.of(context);
 
   @override
   void initState() {

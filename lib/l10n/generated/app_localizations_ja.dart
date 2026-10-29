@@ -341,4 +341,163 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get ongoingSession => '勤務中';
+
+  @override
+  String get settingsTitle => '設定';
+
+  @override
+  String get settingsPreferences => '環境設定';
+
+  @override
+  String get settingsLanguage => '言語';
+
+  @override
+  String get settingsLanguageSubtitle => '使用する言語を選択してください';
+
+  @override
+  String get settingsNotifications => '通知';
+
+  @override
+  String get settingsCheckingPermission => '権限を確認しています...';
+
+  @override
+  String get settingsNotificationsEnabled => '通知は有効です';
+
+  @override
+  String get settingsEnableAttendanceAlerts => '勤怠通知を有効にする';
+
+  @override
+  String get settingsPermissions => '権限';
+
+  @override
+  String get settingsLocationAccess => '位置情報へのアクセス';
+
+  @override
+  String get settingsLocationAccessSubtitle => '位置情報とバックグラウンドアクセスを管理します';
+
+  @override
+  String get settingsAppPermissions => 'アプリの権限';
+
+  @override
+  String get settingsAppPermissionsSubtitle => '端末の設定で権限を管理します';
+
+  @override
+  String get settingsAbout => 'アプリについて';
+
+  @override
+  String get settingsAboutApp => 'OfficeCheckについて';
+
+  @override
+  String get settingsAboutSubtitle => '従業員向け勤怠管理アプリ';
+
+  @override
+  String get settingsAppDescription => '従業員の勤怠管理とオフィスでの出退勤記録を行うアプリです。';
+
+  @override
+  String get settingsLanguageEnglish => 'English';
+
+  @override
+  String get settingsLanguageJapanese => '日本語';
+
+  @override
+  String get settingsLanguageChangedEnglish => '表示言語を英語に変更しました';
+
+  @override
+  String get settingsLanguageChangedJapanese => '表示言語を日本語に変更しました';
+
+  @override
+  String get settingsLanguageChangeFailed => '言語を変更できませんでした。もう一度お試しください。';
+
+  @override
+  String get settingsRefresh => '更新';
+
+  @override
+  String get settingsOpenDeviceSettings => '端末の設定を開く';
+
+  @override
+  String get settingsNotificationsPermissionDenied =>
+      '通知の権限が拒否されています。端末の設定で有効にしてください。';
+
+  @override
+  String get settingsNotificationsPermissionRequired =>
+      '勤怠通知を受け取るには、通知の権限が必要です。';
+
+  @override
+  String get attendanceHistory => '出勤履歴';
+
+  @override
+  String get refresh => '更新';
+
+  @override
+  String get daily => '日別';
+
+  @override
+  String get weekly => '週別';
+
+  @override
+  String get monthly => '月別';
+
+  @override
+  String get previousPeriod => '前の期間';
+
+  @override
+  String get nextPeriod => '次の期間';
+
+  @override
+  String get tapToSelectDate => 'タップして日付を選択';
+
+  @override
+  String get selectAttendanceDate => '出勤日を選択';
+
+  @override
+  String get cancel => 'キャンセル';
+
+  @override
+  String get confirm => '確認';
+
+  @override
+  String get totalWorked => '合計勤務時間';
+
+  @override
+  String get daysAttended => '出勤日数';
+
+  @override
+  String get attendanceSessions => '出勤セッション数';
+
+  @override
+  String get attendanceRecords => '出勤記録';
+
+  @override
+  String get noAttendanceRecords => 'この期間の出勤記録はありません';
+
+  @override
+  String get noAttendanceRecordsHint => '別の日付や期間を選択して、保存された出勤記録を確認してください。';
+
+  @override
+  String get attendanceHistoryLoadError => '出勤履歴を読み込めませんでした。';
+
+  @override
+  String get noAttendanceSessions => '出勤セッションはありません。';
+
+  @override
+  String get inProgress => '勤務中';
+
+  @override
+  String get firstCheckIn => '最初の出勤';
+
+  @override
+  String get lastCheckOut => '最後の退勤';
+
+  @override
+  String get timeUnavailable => '--:--';
+
+  @override
+  String workDuration(int hours, int minutes) {
+    return '$hours時間$minutes分';
+  }
+
+  @override
+  String sessionCountHint(int count) {
+    return '$count件のセッション · タップして詳細を表示';
+  }
 }

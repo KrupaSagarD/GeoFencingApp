@@ -4,25 +4,25 @@ import 'package:flutter/material.dart';
 class AppColors {
   AppColors._();
 
-  // Core brand background & surfaces (Light theme)
+  // Core brand background & surfaces
   static const Color background = Color(0xFFF6F8FC);
   static const Color panel = Color(0xFFFFFFFF);
   static const Color panelAlt = Color(0xFFEBF1FA);
   static const Color darkCard = Color(0xFFEDF2F9);
 
   // Primary blues & cyans
-  static const Color blue = Color(0xFF2563EB); // Vibrant royal blue
+  static const Color blue = Color(0xFF2563EB);
   static const Color blueDark = Color(0xFF1D4ED8);
   static const Color blueGradientStart = Color(0xFF3B82F6);
   static const Color blueGradientEnd = Color(0xFF1D4ED8);
-  static const Color cyan = Color(0xFF0284C7); // Readable light mode blue/cyan accent
+  static const Color cyan = Color(0xFF0284C7);
 
   // Typography / Muted shades
-  static const Color textPrimary = Color(0xFF0F172A); // Slate 900
-  static const Color textSecondary = Color(0xFF334155); // Slate 700
-  static const Color muted = Color(0xFF64748B); // Slate 500
+  static const Color textPrimary = Color(0xFF0F172A);
+  static const Color textSecondary = Color(0xFF334155);
+  static const Color muted = Color(0xFF64748B);
   static const Color textMuted = Color(0xFF64748B);
-  static const Color textSubtle = Color(0xFF94A3B8); // Slate 400
+  static const Color textSubtle = Color(0xFF94A3B8);
 
   // Status colors - Error / Alert
   static const Color error = Color(0xFFDC2626);

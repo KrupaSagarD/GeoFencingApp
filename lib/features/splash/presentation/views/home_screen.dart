@@ -3,6 +3,7 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
+import 'package:geo_fencing/features/splash/presentation/views/settings_screen.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -226,7 +227,6 @@ class _HomeScreenState extends State<HomeScreen>
           .toList()
           : <Map<String, dynamic>>[];
 
-      // Migrate legacy attendance data when no session history exists.
       if (sessions.isEmpty &&
           prefs.getString('officecheck_date') == today) {
         final legacyCheckIn =
@@ -335,7 +335,6 @@ class _HomeScreenState extends State<HomeScreen>
       }
     }
 
-    // Otherwise obtain current position with balanced settings so it resolves promptly
     final position = await Geolocator.getCurrentPosition(
       locationSettings: const LocationSettings(
         accuracy: LocationAccuracy.medium,
@@ -602,7 +601,7 @@ class _HomeScreenState extends State<HomeScreen>
                 ),
                 child: Icon(
                   isSuccess ? Icons.check_circle_rounded : Icons.info_outline_rounded,
-                  color: isSuccess ? AppColors.success : const Color(0xFFDC2626),
+                  color: isSuccess ? AppColors.success : AppColors.error,
                   size: 32,
                 ),
               ),
@@ -756,24 +755,20 @@ class _HomeScreenState extends State<HomeScreen>
                     ),
                   ),
                   IconButton(
-                    tooltip: l10n.refreshLocationTooltip,
-                    onPressed:
-                    _isLoadingLocation ? null : _refreshLocation,
-                    icon: _isLoadingLocation
-                        ? const SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: AppColors.blue,
-                      ),
-                    )
-                        : const Icon(
-                      Icons.refresh_rounded,
+                    tooltip: 'Settings',
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const SettingsScreen(),
+                        ),
+                      );
+                    },
+                    icon: const Icon(
+                      Icons.settings_rounded,
                       color: AppColors.blue,
                     ),
-                  ),
-                ],
+                  ),                ],
               ),
               Sizes.gapH26,
               _buildGeofenceCard(l10n, inside, distance),
@@ -1057,6 +1052,20 @@ class _HomeScreenState extends State<HomeScreen>
                 label: const Text('View Attendance History'),
               ),
 
+              // OutlinedButton.icon(
+              //   onPressed: () {
+              //     Navigator.push(
+              //       context,
+              //       MaterialPageRoute(
+              //         builder: (_) =>
+              //         const AttendanceCorrectionRequestScreen(),
+              //       ),
+              //     );
+              //   },
+              //   icon: const Icon(Icons.edit_calendar_outlined),
+              //   label: const Text('Request Attendance Correction'),
+              // ),
+
               Sizes.gapH24,
               Container(
                 padding: AppPaddings.all16,
@@ -1211,63 +1220,42 @@ class _HomeScreenState extends State<HomeScreen>
     final checkedIn = _isCheckedIn;
 
     return Container(
+      width: double.infinity,
       padding: AppPaddings.all20,
       decoration: Decorations.panelCard22,
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          // Today's work hours
-          Container(
-            width: double.infinity,
-            padding: AppPaddings.all16,
-            margin: const EdgeInsets.only(bottom: 16),
-            decoration: BoxDecoration(
-              color: const Color(0xFFEFF6FF),
-              borderRadius: Sizes.radius16,
-              border: Border.all(
-                color: const Color(0xFFBFDBFE),
-              ),
-            ),
-            child: Row(
-              children: [
-                const Icon(
-                  Icons.schedule_rounded,
-                  color: AppColors.blue,
-                  size: 26,
-                ),
-                Sizes.gapW12,
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        "Today's work hours",
-                        style: TextStyle(
-                          color: AppColors.textSecondary,
-                          fontSize: 13,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                      Sizes.gapH4,
-                      Text(
-                        _formatDuration(_totalDuration),
-                        style: const TextStyle(
-                          color: AppColors.textPrimary,
-                          fontSize: 22,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
+          const SizedBox(height: 8),
+
+          // Centered work-hours heading
+          const Text(
+            "Today's work hours",
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: Colors.black,
+              fontSize: 18,
+              fontWeight: FontWeight.w600,
             ),
           ),
 
-          // Check In / Check Out button
+          Sizes.gapH8,
+          Text(
+            _formatDuration(_totalDuration),
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              color: Colors.black,
+              fontSize: 30,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+
+          const SizedBox(height: 20),
+
+          // Large centered attendance button
           SizedBox(
             width: double.infinity,
-            height: Sizes.buttonHeight,
+            height: 60,
             child: FilledButton.icon(
               onPressed: _isSubmittingAttendance ||
                   _isLoadingLocation ||
@@ -1276,8 +1264,8 @@ class _HomeScreenState extends State<HomeScreen>
                   : _handleAttendanceAction,
               icon: _isSubmittingAttendance
                   ? const SizedBox(
-                width: 18,
-                height: 18,
+                width: 24,
+                height: 24,
                 child: CircularProgressIndicator(
                   strokeWidth: 2,
                   color: AppColors.white,
@@ -1287,6 +1275,7 @@ class _HomeScreenState extends State<HomeScreen>
                 checkedIn
                     ? Icons.logout_rounded
                     : Icons.login_rounded,
+                size: 34,
               ),
               label: Text(
                 _isSubmittingAttendance
@@ -1297,16 +1286,14 @@ class _HomeScreenState extends State<HomeScreen>
               ),
               style: FilledButton.styleFrom(
                 backgroundColor: checkedIn
-                    ? const Color(0xFF475569)
-                    : AppColors.blue,
-                disabledBackgroundColor:
-                AppColors.blue.withValues(alpha: 0.25),
-                foregroundColor: AppColors.white,
+                    ? Colors.orange
+                    : AppColors.success,
+                foregroundColor: Colors.black,
                 shape: RoundedRectangleBorder(
-                  borderRadius: Sizes.radius16,
+                  borderRadius: BorderRadius.circular(10),
                 ),
                 textStyle: const TextStyle(
-                  fontSize: 15,
+                  fontSize: 22,
                   fontWeight: FontWeight.w700,
                 ),
               ),
@@ -1317,6 +1304,7 @@ class _HomeScreenState extends State<HomeScreen>
             Sizes.gapH10,
             Text(
               l10n.attendanceAfterConfigNotice,
+              textAlign: TextAlign.center,
               style: const TextStyle(
                 color: AppColors.muted,
                 fontSize: 11,
@@ -1324,6 +1312,7 @@ class _HomeScreenState extends State<HomeScreen>
               ),
             ),
           ],
+          const SizedBox(height: 8),
         ],
       ),
     );

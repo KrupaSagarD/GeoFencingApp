@@ -111,5 +111,74 @@
   "completedSession": "Completed",
   "autoGeofenceCheckout": "Auto checked-out via geofence",
   "manualCheckout": "Manually checked-out",
-  "ongoingSession": "Ongoing session"
+  "ongoingSession": "Ongoing session",
+  "settingsTitle": "Settings",
+  "settingsPreferences": "Preferences",
+  "settingsLanguage": "Language",
+  "settingsLanguageSubtitle": "Choose your preferred language",
+  "settingsNotifications": "Notifications",
+  "settingsCheckingPermission": "Checking permission...",
+  "settingsNotificationsEnabled": "Notifications are enabled",
+  "settingsEnableAttendanceAlerts": "Enable attendance alerts",
+  "settingsPermissions": "Permissions",
+  "settingsLocationAccess": "Location access",
+  "settingsLocationAccessSubtitle": "Manage location and background access",
+  "settingsAppPermissions": "App permissions",
+  "settingsAppPermissionsSubtitle": "Manage permissions in device settings",
+  "settingsAbout": "About",
+  "settingsAboutApp": "About OfficeCheck",
+  "settingsAboutSubtitle": "Employee attendance application",
+  "settingsAppDescription": "Employee attendance and office check-in.",
+  "settingsLanguageEnglish": "English",
+  "settingsLanguageJapanese": "日本語",
+  "settingsLanguageChangedEnglish": "Language changed to English",
+  "settingsLanguageChangedJapanese": "Language changed to Japanese",
+  "settingsLanguageChangeFailed": "Unable to change language. Please try again.",
+  "settingsRefresh": "Refresh",
+  "settingsOpenDeviceSettings": "Open device settings",
+  "settingsNotificationsPermissionDenied": "Notification permission is denied. Enable it in device settings.",
+  "settingsNotificationsPermissionRequired": "Notification permission is required to receive attendance alerts.",
+  "attendanceHistory": "Attendance History",
+  "refresh": "Refresh",
+  "daily": "Daily",
+  "weekly": "Weekly",
+  "monthly": "Monthly",
+  "previousPeriod": "Previous period",
+  "nextPeriod": "Next period",
+  "tapToSelectDate": "Tap to select date",
+  "selectAttendanceDate": "Select attendance date",
+  "cancel": "Cancel",
+  "confirm": "Confirm",
+  "totalWorked": "Total worked",
+  "daysAttended": "Days attended",
+  "attendanceSessions": "Attendance sessions",
+  "attendanceRecords": "Attendance records",
+  "noAttendanceRecords": "No attendance records for this period",
+  "noAttendanceRecordsHint": "Choose another date or period to view your saved attendance.",
+  "attendanceHistoryLoadError": "Unable to load attendance history.",
+  "noAttendanceSessions": "No attendance sessions found.",
+  "inProgress": "In progress",
+  "firstCheckIn": "First check-in",
+  "lastCheckOut": "Last check-out",
+  "timeUnavailable": "--:--",
+  "workDuration": "{hours}h {minutes}m",
+  "@workDuration": {
+    "placeholders": {
+      "hours": {
+        "type": "int"
+      },
+      "minutes": {
+        "type": "int"
+      }
+    }
+  },
+  "sessionCountHint": "{count} sessions · Tap to view details",
+  "@sessionCountHint": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  }
+
 }

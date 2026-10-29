@@ -739,6 +739,312 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Ongoing session'**
   String get ongoingSession;
+
+  /// No description provided for @settingsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Settings'**
+  String get settingsTitle;
+
+  /// No description provided for @settingsPreferences.
+  ///
+  /// In en, this message translates to:
+  /// **'Preferences'**
+  String get settingsPreferences;
+
+  /// No description provided for @settingsLanguage.
+  ///
+  /// In en, this message translates to:
+  /// **'Language'**
+  String get settingsLanguage;
+
+  /// No description provided for @settingsLanguageSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose your preferred language'**
+  String get settingsLanguageSubtitle;
+
+  /// No description provided for @settingsNotifications.
+  ///
+  /// In en, this message translates to:
+  /// **'Notifications'**
+  String get settingsNotifications;
+
+  /// No description provided for @settingsCheckingPermission.
+  ///
+  /// In en, this message translates to:
+  /// **'Checking permission...'**
+  String get settingsCheckingPermission;
+
+  /// No description provided for @settingsNotificationsEnabled.
+  ///
+  /// In en, this message translates to:
+  /// **'Notifications are enabled'**
+  String get settingsNotificationsEnabled;
+
+  /// No description provided for @settingsEnableAttendanceAlerts.
+  ///
+  /// In en, this message translates to:
+  /// **'Enable attendance alerts'**
+  String get settingsEnableAttendanceAlerts;
+
+  /// No description provided for @settingsPermissions.
+  ///
+  /// In en, this message translates to:
+  /// **'Permissions'**
+  String get settingsPermissions;
+
+  /// No description provided for @settingsLocationAccess.
+  ///
+  /// In en, this message translates to:
+  /// **'Location access'**
+  String get settingsLocationAccess;
+
+  /// No description provided for @settingsLocationAccessSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Manage location and background access'**
+  String get settingsLocationAccessSubtitle;
+
+  /// No description provided for @settingsAppPermissions.
+  ///
+  /// In en, this message translates to:
+  /// **'App permissions'**
+  String get settingsAppPermissions;
+
+  /// No description provided for @settingsAppPermissionsSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Manage permissions in device settings'**
+  String get settingsAppPermissionsSubtitle;
+
+  /// No description provided for @settingsAbout.
+  ///
+  /// In en, this message translates to:
+  /// **'About'**
+  String get settingsAbout;
+
+  /// No description provided for @settingsAboutApp.
+  ///
+  /// In en, this message translates to:
+  /// **'About OfficeCheck'**
+  String get settingsAboutApp;
+
+  /// No description provided for @settingsAboutSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Employee attendance application'**
+  String get settingsAboutSubtitle;
+
+  /// No description provided for @settingsAppDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Employee attendance and office check-in.'**
+  String get settingsAppDescription;
+
+  /// No description provided for @settingsLanguageEnglish.
+  ///
+  /// In en, this message translates to:
+  /// **'English'**
+  String get settingsLanguageEnglish;
+
+  /// No description provided for @settingsLanguageJapanese.
+  ///
+  /// In en, this message translates to:
+  /// **'日本語'**
+  String get settingsLanguageJapanese;
+
+  /// No description provided for @settingsLanguageChangedEnglish.
+  ///
+  /// In en, this message translates to:
+  /// **'Language changed to English'**
+  String get settingsLanguageChangedEnglish;
+
+  /// No description provided for @settingsLanguageChangedJapanese.
+  ///
+  /// In en, this message translates to:
+  /// **'Language changed to Japanese'**
+  String get settingsLanguageChangedJapanese;
+
+  /// No description provided for @settingsLanguageChangeFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Unable to change language. Please try again.'**
+  String get settingsLanguageChangeFailed;
+
+  /// No description provided for @settingsRefresh.
+  ///
+  /// In en, this message translates to:
+  /// **'Refresh'**
+  String get settingsRefresh;
+
+  /// No description provided for @settingsOpenDeviceSettings.
+  ///
+  /// In en, this message translates to:
+  /// **'Open device settings'**
+  String get settingsOpenDeviceSettings;
+
+  /// No description provided for @settingsNotificationsPermissionDenied.
+  ///
+  /// In en, this message translates to:
+  /// **'Notification permission is denied. Enable it in device settings.'**
+  String get settingsNotificationsPermissionDenied;
+
+  /// No description provided for @settingsNotificationsPermissionRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Notification permission is required to receive attendance alerts.'**
+  String get settingsNotificationsPermissionRequired;
+
+  /// No description provided for @attendanceHistory.
+  ///
+  /// In en, this message translates to:
+  /// **'Attendance History'**
+  String get attendanceHistory;
+
+  /// No description provided for @refresh.
+  ///
+  /// In en, this message translates to:
+  /// **'Refresh'**
+  String get refresh;
+
+  /// No description provided for @daily.
+  ///
+  /// In en, this message translates to:
+  /// **'Daily'**
+  String get daily;
+
+  /// No description provided for @weekly.
+  ///
+  /// In en, this message translates to:
+  /// **'Weekly'**
+  String get weekly;
+
+  /// No description provided for @monthly.
+  ///
+  /// In en, this message translates to:
+  /// **'Monthly'**
+  String get monthly;
+
+  /// No description provided for @previousPeriod.
+  ///
+  /// In en, this message translates to:
+  /// **'Previous period'**
+  String get previousPeriod;
+
+  /// No description provided for @nextPeriod.
+  ///
+  /// In en, this message translates to:
+  /// **'Next period'**
+  String get nextPeriod;
+
+  /// No description provided for @tapToSelectDate.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap to select date'**
+  String get tapToSelectDate;
+
+  /// No description provided for @selectAttendanceDate.
+  ///
+  /// In en, this message translates to:
+  /// **'Select attendance date'**
+  String get selectAttendanceDate;
+
+  /// No description provided for @cancel.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel'**
+  String get cancel;
+
+  /// No description provided for @confirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm'**
+  String get confirm;
+
+  /// No description provided for @totalWorked.
+  ///
+  /// In en, this message translates to:
+  /// **'Total worked'**
+  String get totalWorked;
+
+  /// No description provided for @daysAttended.
+  ///
+  /// In en, this message translates to:
+  /// **'Days attended'**
+  String get daysAttended;
+
+  /// No description provided for @attendanceSessions.
+  ///
+  /// In en, this message translates to:
+  /// **'Attendance sessions'**
+  String get attendanceSessions;
+
+  /// No description provided for @attendanceRecords.
+  ///
+  /// In en, this message translates to:
+  /// **'Attendance records'**
+  String get attendanceRecords;
+
+  /// No description provided for @noAttendanceRecords.
+  ///
+  /// In en, this message translates to:
+  /// **'No attendance records for this period'**
+  String get noAttendanceRecords;
+
+  /// No description provided for @noAttendanceRecordsHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose another date or period to view your saved attendance.'**
+  String get noAttendanceRecordsHint;
+
+  /// No description provided for @attendanceHistoryLoadError.
+  ///
+  /// In en, this message translates to:
+  /// **'Unable to load attendance history.'**
+  String get attendanceHistoryLoadError;
+
+  /// No description provided for @noAttendanceSessions.
+  ///
+  /// In en, this message translates to:
+  /// **'No attendance sessions found.'**
+  String get noAttendanceSessions;
+
+  /// No description provided for @inProgress.
+  ///
+  /// In en, this message translates to:
+  /// **'In progress'**
+  String get inProgress;
+
+  /// No description provided for @firstCheckIn.
+  ///
+  /// In en, this message translates to:
+  /// **'First check-in'**
+  String get firstCheckIn;
+
+  /// No description provided for @lastCheckOut.
+  ///
+  /// In en, this message translates to:
+  /// **'Last check-out'**
+  String get lastCheckOut;
+
+  /// No description provided for @timeUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'--:--'**
+  String get timeUnavailable;
+
+  /// No description provided for @workDuration.
+  ///
+  /// In en, this message translates to:
+  /// **'{hours}h {minutes}m'**
+  String workDuration(int hours, int minutes);
+
+  /// No description provided for @sessionCountHint.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} sessions · Tap to view details'**
+  String sessionCountHint(int count);
 }
 
 class _AppLocalizationsDelegate

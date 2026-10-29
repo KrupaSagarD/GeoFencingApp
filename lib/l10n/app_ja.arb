@@ -111,5 +111,75 @@
   "completedSession": "完了",
   "autoGeofenceCheckout": "ジオフェンスで自動チェックアウト",
   "manualCheckout": "手動チェックアウト",
-  "ongoingSession": "勤務中"
+  "ongoingSession": "勤務中",
+  "settingsTitle": "設定",
+  "settingsPreferences": "環境設定",
+  "settingsLanguage": "言語",
+  "settingsLanguageSubtitle": "使用する言語を選択してください",
+  "settingsNotifications": "通知",
+  "settingsCheckingPermission": "権限を確認しています...",
+  "settingsNotificationsEnabled": "通知は有効です",
+  "settingsEnableAttendanceAlerts": "勤怠通知を有効にする",
+  "settingsPermissions": "権限",
+  "settingsLocationAccess": "位置情報へのアクセス",
+  "settingsLocationAccessSubtitle": "位置情報とバックグラウンドアクセスを管理します",
+  "settingsAppPermissions": "アプリの権限",
+  "settingsAppPermissionsSubtitle": "端末の設定で権限を管理します",
+  "settingsAbout": "アプリについて",
+  "settingsAboutApp": "OfficeCheckについて",
+  "settingsAboutSubtitle": "従業員向け勤怠管理アプリ",
+  "settingsAppDescription": "従業員の勤怠管理とオフィスでの出退勤記録を行うアプリです。",
+  "settingsLanguageEnglish": "English",
+  "settingsLanguageJapanese": "日本語",
+  "settingsLanguageChangedEnglish": "表示言語を英語に変更しました",
+  "settingsLanguageChangedJapanese": "表示言語を日本語に変更しました",
+  "settingsLanguageChangeFailed": "言語を変更できませんでした。もう一度お試しください。",
+  "settingsRefresh": "更新",
+  "settingsOpenDeviceSettings": "端末の設定を開く",
+  "settingsNotificationsPermissionDenied": "通知の権限が拒否されています。端末の設定で有効にしてください。",
+  "settingsNotificationsPermissionRequired": "勤怠通知を受け取るには、通知の権限が必要です。",
+  "attendanceHistory": "出勤履歴",
+  "refresh": "更新",
+  "daily": "日別",
+  "weekly": "週別",
+  "monthly": "月別",
+  "previousPeriod": "前の期間",
+  "nextPeriod": "次の期間",
+  "tapToSelectDate": "タップして日付を選択",
+  "selectAttendanceDate": "出勤日を選択",
+  "cancel": "キャンセル",
+  "confirm": "確認",
+  "totalWorked": "合計勤務時間",
+  "daysAttended": "出勤日数",
+  "attendanceSessions": "出勤セッション数",
+  "attendanceRecords": "出勤記録",
+  "noAttendanceRecords": "この期間の出勤記録はありません",
+  "noAttendanceRecordsHint": "別の日付や期間を選択して、保存された出勤記録を確認してください。",
+  "attendanceHistoryLoadError": "出勤履歴を読み込めませんでした。",
+  "noAttendanceSessions": "出勤セッションはありません。",
+  "inProgress": "勤務中",
+  "firstCheckIn": "最初の出勤",
+  "lastCheckOut": "最後の退勤",
+  "timeUnavailable": "--:--",
+  "workDuration": "{hours}時間{minutes}分",
+  "@workDuration": {
+    "placeholders": {
+      "hours": {
+        "type": "int"
+      },
+      "minutes": {
+        "type": "int"
+      }
+    }
+  },
+  "sessionCountHint": "{count}件のセッション · タップして詳細を表示",
+  "@sessionCountHint": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  }
+
+
 }

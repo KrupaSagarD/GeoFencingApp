@@ -368,4 +368,168 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get ongoingSession => 'Ongoing session';
+
+  @override
+  String get settingsTitle => 'Settings';
+
+  @override
+  String get settingsPreferences => 'Preferences';
+
+  @override
+  String get settingsLanguage => 'Language';
+
+  @override
+  String get settingsLanguageSubtitle => 'Choose your preferred language';
+
+  @override
+  String get settingsNotifications => 'Notifications';
+
+  @override
+  String get settingsCheckingPermission => 'Checking permission...';
+
+  @override
+  String get settingsNotificationsEnabled => 'Notifications are enabled';
+
+  @override
+  String get settingsEnableAttendanceAlerts => 'Enable attendance alerts';
+
+  @override
+  String get settingsPermissions => 'Permissions';
+
+  @override
+  String get settingsLocationAccess => 'Location access';
+
+  @override
+  String get settingsLocationAccessSubtitle =>
+      'Manage location and background access';
+
+  @override
+  String get settingsAppPermissions => 'App permissions';
+
+  @override
+  String get settingsAppPermissionsSubtitle =>
+      'Manage permissions in device settings';
+
+  @override
+  String get settingsAbout => 'About';
+
+  @override
+  String get settingsAboutApp => 'About OfficeCheck';
+
+  @override
+  String get settingsAboutSubtitle => 'Employee attendance application';
+
+  @override
+  String get settingsAppDescription =>
+      'Employee attendance and office check-in.';
+
+  @override
+  String get settingsLanguageEnglish => 'English';
+
+  @override
+  String get settingsLanguageJapanese => '日本語';
+
+  @override
+  String get settingsLanguageChangedEnglish => 'Language changed to English';
+
+  @override
+  String get settingsLanguageChangedJapanese => 'Language changed to Japanese';
+
+  @override
+  String get settingsLanguageChangeFailed =>
+      'Unable to change language. Please try again.';
+
+  @override
+  String get settingsRefresh => 'Refresh';
+
+  @override
+  String get settingsOpenDeviceSettings => 'Open device settings';
+
+  @override
+  String get settingsNotificationsPermissionDenied =>
+      'Notification permission is denied. Enable it in device settings.';
+
+  @override
+  String get settingsNotificationsPermissionRequired =>
+      'Notification permission is required to receive attendance alerts.';
+
+  @override
+  String get attendanceHistory => 'Attendance History';
+
+  @override
+  String get refresh => 'Refresh';
+
+  @override
+  String get daily => 'Daily';
+
+  @override
+  String get weekly => 'Weekly';
+
+  @override
+  String get monthly => 'Monthly';
+
+  @override
+  String get previousPeriod => 'Previous period';
+
+  @override
+  String get nextPeriod => 'Next period';
+
+  @override
+  String get tapToSelectDate => 'Tap to select date';
+
+  @override
+  String get selectAttendanceDate => 'Select attendance date';
+
+  @override
+  String get cancel => 'Cancel';
+
+  @override
+  String get confirm => 'Confirm';
+
+  @override
+  String get totalWorked => 'Total worked';
+
+  @override
+  String get daysAttended => 'Days attended';
+
+  @override
+  String get attendanceSessions => 'Attendance sessions';
+
+  @override
+  String get attendanceRecords => 'Attendance records';
+
+  @override
+  String get noAttendanceRecords => 'No attendance records for this period';
+
+  @override
+  String get noAttendanceRecordsHint =>
+      'Choose another date or period to view your saved attendance.';
+
+  @override
+  String get attendanceHistoryLoadError => 'Unable to load attendance history.';
+
+  @override
+  String get noAttendanceSessions => 'No attendance sessions found.';
+
+  @override
+  String get inProgress => 'In progress';
+
+  @override
+  String get firstCheckIn => 'First check-in';
+
+  @override
+  String get lastCheckOut => 'Last check-out';
+
+  @override
+  String get timeUnavailable => '--:--';
+
+  @override
+  String workDuration(int hours, int minutes) {
+    return '${hours}h ${minutes}m';
+  }
+
+  @override
+  String sessionCountHint(int count) {
+    return '$count sessions · Tap to view details';
+  }
 }

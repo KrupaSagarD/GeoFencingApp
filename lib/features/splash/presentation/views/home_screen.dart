@@ -8,6 +8,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../../core/contants/constants.dart';
 import '../../../../l10n/generated/app_localizations.dart';
+import 'attendence_history_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -32,6 +33,7 @@ class _HomeScreenState extends State<HomeScreen>
   bool _isSubmittingAttendance = false;
   bool _isCheckedIn = false;
 
+  Timer? _workHoursTimer;
 
   String? _locationMessage;
 
@@ -49,6 +51,14 @@ class _HomeScreenState extends State<HomeScreen>
       position.longitude,
       officeLatitude,
       officeLongitude,
+    );
+  }
+
+  void _openAttendanceHistory() {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => const AttendanceHistoryScreen(),
+      ),
     );
   }
 
@@ -88,12 +98,21 @@ class _HomeScreenState extends State<HomeScreen>
     WidgetsBinding.instance.addObserver(this);
     unawaited(_initializeHome());
     _startLiveLocationUpdates();
+    _workHoursTimer = Timer.periodic(
+      const Duration(minutes: 1),
+          (_) {
+        if (mounted && _isCheckedIn) {
+          setState(() {});
+        }
+      },
+    );
   }
 
   @override
   void dispose() {
     _positionStreamSubscription?.cancel();
     WidgetsBinding.instance.removeObserver(this);
+    _workHoursTimer?.cancel();
     super.dispose();
   }
 
@@ -636,22 +655,31 @@ class _HomeScreenState extends State<HomeScreen>
     );
   }
 
-  String _formatTime(DateTime? value) {
-    if (value == null) return '--:--';
 
-    final hour = value.hour % 12 == 0 ? 12 : value.hour % 12;
-    final minute = value.minute.toString().padLeft(2, '0');
-    final period = value.hour >= 12 ? 'PM' : 'AM';
-
-    return '$hour:$minute $period';
-  }
 
   String _formatDuration(Duration duration) {
     final hours = duration.inHours;
     final minutes = duration.inMinutes.remainder(60);
 
-    return '${hours}h ${minutes}m';
+    return '${hours}h ${minutes.toString().padLeft(2, '0')}m';
   }
+
+  // String _formatTime(DateTime? value) {
+  //   if (value == null) return '--:--';
+  //
+  //   final hour = value.hour % 12 == 0 ? 12 : value.hour % 12;
+  //   final minute = value.minute.toString().padLeft(2, '0');
+  //   final period = value.hour >= 12 ? 'PM' : 'AM';
+  //
+  //   return '$hour:$minute $period';
+  // }
+  //
+  // String _formatDuration(Duration duration) {
+  //   final hours = duration.inHours;
+  //   final minutes = duration.inMinutes.remainder(60);
+  //
+  //   return '${hours}h ${minutes}m';
+  // }
 
   @override
   Widget build(BuildContext context) {
@@ -761,268 +789,274 @@ class _HomeScreenState extends State<HomeScreen>
               ],
               // Today's attendance sessions and total duration.
               Sizes.gapH24,
-              Container(
-                padding: AppPaddings.all20,
-                decoration: Decorations.panelCard22,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Container(
-                          padding: AppPaddings.all8,
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFEFF6FF),
-                            borderRadius: Sizes.radius12,
-                          ),
-                          child: const Icon(
-                            Icons.calendar_month_rounded,
-                            size: 20,
-                            color: AppColors.blue,
-                          ),
-                        ),
-                        Sizes.gapW12,
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                l10n.todaySessions,
-                                style: TextStyles.sectionHeader,
-                              ),
-                              Sizes.gapH4,
-                              Text(
-                                l10n.todaySessionsSubtitle,
-                                style: const TextStyle(
-                                  color: AppColors.muted,
-                                  fontSize: 12,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                    Sizes.gapH20,
+              // Container(
+              //   padding: AppPaddings.all20,
+              //   decoration: Decorations.panelCard22,
+              //   child: Column(
+              //     crossAxisAlignment: CrossAxisAlignment.start,
+              //     children: [
+              //       Row(
+              //         children: [
+              //           Container(
+              //             padding: AppPaddings.all8,
+              //             decoration: BoxDecoration(
+              //               color: const Color(0xFFEFF6FF),
+              //               borderRadius: Sizes.radius12,
+              //             ),
+              //             child: const Icon(
+              //               Icons.calendar_month_rounded,
+              //               size: 20,
+              //               color: AppColors.blue,
+              //             ),
+              //           ),
+              //           Sizes.gapW12,
+              //           Expanded(
+              //             child: Column(
+              //               crossAxisAlignment: CrossAxisAlignment.start,
+              //               children: [
+              //                 Text(
+              //                   l10n.todaySessions,
+              //                   style: TextStyles.sectionHeader,
+              //                 ),
+              //                 Sizes.gapH4,
+              //                 Text(
+              //                   l10n.todaySessionsSubtitle,
+              //                   style: const TextStyle(
+              //                     color: AppColors.muted,
+              //                     fontSize: 12,
+              //                   ),
+              //                 ),
+              //               ],
+              //             ),
+              //           ),
+              //         ],
+              //       ),
+              //       Sizes.gapH20,
+              //       Container(
+              //         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+              //         decoration: BoxDecoration(
+              //           color: const Color(0xFFF8FAFC),
+              //           borderRadius: Sizes.radius14,
+              //           border: Border.all(color: AppColors.borderSubtle),
+              //         ),
+              //         child: Row(
+              //           children: [
+              //             const Icon(
+              //               Icons.timelapse_rounded,
+              //               color: AppColors.blue,
+              //               size: 24,
+              //             ),
+              //             Sizes.gapW12,
+              //             Expanded(
+              //               child: Column(
+              //                 crossAxisAlignment: CrossAxisAlignment.start,
+              //                 children: [
+              //                   Text(
+              //                     l10n.totalWorkHours,
+              //                     style: const TextStyle(
+              //                       color: AppColors.muted,
+              //                       fontSize: 11,
+              //                       fontWeight: FontWeight.w500,
+              //                     ),
+              //                   ),
+              //                   Sizes.gapH4,
+              //                   Text(
+              //                     _formatDuration(_totalDuration),
+              //                     style: const TextStyle(
+              //                       color: AppColors.textPrimary,
+              //                       fontSize: 18,
+              //                       fontWeight: FontWeight.w700,
+              //                     ),
+              //                   ),
+              //                 ],
+              //               ),
+              //             ),
+              //             Container(
+              //               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+              //               decoration: BoxDecoration(
+              //                 color: AppColors.panel,
+              //                 borderRadius: Sizes.radius12,
+              //                 border: Border.all(color: AppColors.borderSubtle),
+              //               ),
+              //               child: Text(
+              //                 '${_todaySessions.length} ${_todaySessions.length == 1 ? "Session" : "Sessions"}',
+              //                 style: const TextStyle(
+              //                   color: AppColors.blue,
+              //                   fontSize: 11,
+              //                   fontWeight: FontWeight.w600,
+              //                 ),
+              //               ),
+              //             ),
+              //           ],
+              //         ),
+              //       ),
+              //       Sizes.gapH16,
+              //
+              //       if (_todaySessions.isEmpty)
+              //         Container(
+              //           padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
+              //           alignment: Alignment.center,
+              //           decoration: BoxDecoration(
+              //             color: const Color(0xFFFAFAFA),
+              //             borderRadius: Sizes.radius14,
+              //             border: Border.all(
+              //               color: AppColors.borderSubtle,
+              //               strokeAlign: BorderSide.strokeAlignCenter,
+              //             ),
+              //           ),
+              //           child: Text(
+              //             l10n.noAttendanceSessionsYet,
+              //             textAlign: TextAlign.center,
+              //             style: const TextStyle(
+              //               color: AppColors.textSecondary,
+              //               fontSize: 13,
+              //               fontWeight: FontWeight.w500,
+              //             ),
+              //           ),
+              //         )
+              //       else ...[
+              //         // Compact Table Header
+              //         Container(
+              //           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              //           decoration: BoxDecoration(
+              //             color: const Color(0xFFF1F5F9),
+              //             borderRadius: Sizes.radius12,
+              //           ),
+              //           child: const Row(
+              //             children: [
+              //               Expanded(
+              //                 flex: 3,
+              //                 child: Text(
+              //                   'Check In',
+              //                   style: TextStyle(
+              //                     color: AppColors.textSecondary,
+              //                     fontSize: 12,
+              //                     fontWeight: FontWeight.w700,
+              //                   ),
+              //                 ),
+              //               ),
+              //               Expanded(
+              //                 flex: 3,
+              //                 child: Text(
+              //                   'Check Out',
+              //                   style: TextStyle(
+              //                     color: AppColors.textSecondary,
+              //                     fontSize: 12,
+              //                     fontWeight: FontWeight.w700,
+              //                   ),
+              //                 ),
+              //               ),
+              //               Expanded(
+              //                 flex: 2,
+              //                 child: Text(
+              //                   'Duration',
+              //                   textAlign: TextAlign.end,
+              //                   style: TextStyle(
+              //                     color: AppColors.textSecondary,
+              //                     fontSize: 12,
+              //                     fontWeight: FontWeight.w700,
+              //                   ),
+              //                 ),
+              //               ),
+              //             ],
+              //           ),
+              //         ),
+              //         Sizes.gapH8,
+              //         ..._todaySessions.asMap().entries.map((entry) {
+              //           final session = entry.value;
+              //
+              //           final checkIn = _parseTime(session['checkInTime']);
+              //           final checkOut = _parseTime(session['checkOutTime']);
+              //           final isCompleted = !(checkIn != null && checkOut == null);
+              //
+              //           final duration = checkIn == null
+              //               ? Duration.zero
+              //               : (checkOut ?? DateTime.now()).difference(checkIn);
+              //
+              //           final isAutoGeofence = session['checkOutType'] == 'geofence';
+              //
+              //           return Container(
+              //             margin: const EdgeInsets.symmetric(vertical: 3),
+              //             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              //             decoration: BoxDecoration(
+              //               color: AppColors.panel,
+              //               borderRadius: Sizes.radius12,
+              //               border: Border.all(
+              //                 color: isCompleted
+              //                     ? AppColors.borderSubtle
+              //                     : const Color(0xFFBFDBFE),
+              //               ),
+              //             ),
+              //             child: Row(
+              //               children: [
+              //                 Expanded(
+              //                   flex: 3,
+              //                   child: Text(
+              //                     _formatTime(checkIn),
+              //                     style: const TextStyle(
+              //                       color: AppColors.textPrimary,
+              //                       fontSize: 13,
+              //                       fontWeight: FontWeight.w600,
+              //                     ),
+              //                   ),
+              //                 ),
+              //                 Expanded(
+              //                   flex: 3,
+              //                   child: Row(
+              //                     children: [
+              //                       Text(
+              //                         isCompleted
+              //                             ? _formatTime(checkOut)
+              //                             : l10n.activeSession,
+              //                         style: TextStyle(
+              //                           color: isCompleted
+              //                               ? AppColors.textPrimary
+              //                               : const Color(0xFFD97706),
+              //                           fontSize: 13,
+              //                           fontWeight: isCompleted
+              //                               ? FontWeight.w600
+              //                               : FontWeight.w700,
+              //                         ),
+              //                       ),
+              //                       if (isAutoGeofence) ...[
+              //                         const SizedBox(width: 4),
+              //                         const Icon(
+              //                           Icons.radar_rounded,
+              //                           size: 13,
+              //                           color: AppColors.blue,
+              //                         ),
+              //                       ],
+              //                     ],
+              //                   ),
+              //                 ),
+              //                 Expanded(
+              //                   flex: 2,
+              //                   child: Text(
+              //                     _formatDuration(duration),
+              //                     textAlign: TextAlign.end,
+              //                     style: const TextStyle(
+              //                       color: AppColors.blue,
+              //                       fontSize: 13,
+              //                       fontWeight: FontWeight.w700,
+              //                     ),
+              //                   ),
+              //                 ),
+              //               ],
+              //             ),
+              //           );
+              //         }),
+              //       ],
+              //     ],
+              //   ),
+              // ),
 
-                    // Summary Banner
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFF8FAFC),
-                        borderRadius: Sizes.radius14,
-                        border: Border.all(color: AppColors.borderSubtle),
-                      ),
-                      child: Row(
-                        children: [
-                          const Icon(
-                            Icons.timelapse_rounded,
-                            color: AppColors.blue,
-                            size: 24,
-                          ),
-                          Sizes.gapW12,
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  l10n.totalWorkHours,
-                                  style: const TextStyle(
-                                    color: AppColors.muted,
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                                ),
-                                Sizes.gapH4,
-                                Text(
-                                  _formatDuration(_totalDuration),
-                                  style: const TextStyle(
-                                    color: AppColors.textPrimary,
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.w700,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                            decoration: BoxDecoration(
-                              color: AppColors.panel,
-                              borderRadius: Sizes.radius12,
-                              border: Border.all(color: AppColors.borderSubtle),
-                            ),
-                            child: Text(
-                              '${_todaySessions.length} ${_todaySessions.length == 1 ? "Session" : "Sessions"}',
-                              style: const TextStyle(
-                                color: AppColors.blue,
-                                fontSize: 11,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    Sizes.gapH16,
 
-                    if (_todaySessions.isEmpty)
-                      Container(
-                        padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
-                        alignment: Alignment.center,
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFFAFAFA),
-                          borderRadius: Sizes.radius14,
-                          border: Border.all(
-                            color: AppColors.borderSubtle,
-                            strokeAlign: BorderSide.strokeAlignCenter,
-                          ),
-                        ),
-                        child: Text(
-                          l10n.noAttendanceSessionsYet,
-                          textAlign: TextAlign.center,
-                          style: const TextStyle(
-                            color: AppColors.textSecondary,
-                            fontSize: 13,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                      )
-                    else ...[
-                      // Compact Table Header
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFF1F5F9),
-                          borderRadius: Sizes.radius12,
-                        ),
-                        child: const Row(
-                          children: [
-                            Expanded(
-                              flex: 3,
-                              child: Text(
-                                'Check In',
-                                style: TextStyle(
-                                  color: AppColors.textSecondary,
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w700,
-                                ),
-                              ),
-                            ),
-                            Expanded(
-                              flex: 3,
-                              child: Text(
-                                'Check Out',
-                                style: TextStyle(
-                                  color: AppColors.textSecondary,
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w700,
-                                ),
-                              ),
-                            ),
-                            Expanded(
-                              flex: 2,
-                              child: Text(
-                                'Duration',
-                                textAlign: TextAlign.end,
-                                style: TextStyle(
-                                  color: AppColors.textSecondary,
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w700,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      Sizes.gapH8,
-                      ..._todaySessions.asMap().entries.map((entry) {
-                        final session = entry.value;
-
-                        final checkIn = _parseTime(session['checkInTime']);
-                        final checkOut = _parseTime(session['checkOutTime']);
-                        final isCompleted = !(checkIn != null && checkOut == null);
-
-                        final duration = checkIn == null
-                            ? Duration.zero
-                            : (checkOut ?? DateTime.now()).difference(checkIn);
-
-                        final isAutoGeofence = session['checkOutType'] == 'geofence';
-
-                        return Container(
-                          margin: const EdgeInsets.symmetric(vertical: 3),
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                          decoration: BoxDecoration(
-                            color: AppColors.panel,
-                            borderRadius: Sizes.radius12,
-                            border: Border.all(
-                              color: isCompleted
-                                  ? AppColors.borderSubtle
-                                  : const Color(0xFFBFDBFE),
-                            ),
-                          ),
-                          child: Row(
-                            children: [
-                              Expanded(
-                                flex: 3,
-                                child: Text(
-                                  _formatTime(checkIn),
-                                  style: const TextStyle(
-                                    color: AppColors.textPrimary,
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                              ),
-                              Expanded(
-                                flex: 3,
-                                child: Row(
-                                  children: [
-                                    Text(
-                                      isCompleted
-                                          ? _formatTime(checkOut)
-                                          : l10n.activeSession,
-                                      style: TextStyle(
-                                        color: isCompleted
-                                            ? AppColors.textPrimary
-                                            : const Color(0xFFD97706),
-                                        fontSize: 13,
-                                        fontWeight: isCompleted
-                                            ? FontWeight.w600
-                                            : FontWeight.w700,
-                                      ),
-                                    ),
-                                    if (isAutoGeofence) ...[
-                                      const SizedBox(width: 4),
-                                      const Icon(
-                                        Icons.radar_rounded,
-                                        size: 13,
-                                        color: AppColors.blue,
-                                      ),
-                                    ],
-                                  ],
-                                ),
-                              ),
-                              Expanded(
-                                flex: 2,
-                                child: Text(
-                                  _formatDuration(duration),
-                                  textAlign: TextAlign.end,
-                                  style: const TextStyle(
-                                    color: AppColors.blue,
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.w700,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        );
-                      }),
-                    ],
-                  ],
-                ),
+              OutlinedButton.icon(
+                onPressed: _openAttendanceHistory,
+                icon: const Icon(Icons.history),
+                label: const Text('View Attendance History'),
               ),
+
               Sizes.gapH24,
               Container(
                 padding: AppPaddings.all16,
@@ -1172,6 +1206,7 @@ class _HomeScreenState extends State<HomeScreen>
     );
   }
 
+
   Widget _buildAttendanceCard(AppLocalizations l10n) {
     final checkedIn = _isCheckedIn;
 
@@ -1181,27 +1216,55 @@ class _HomeScreenState extends State<HomeScreen>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              Icon(
-                checkedIn
-                    ? Icons.check_circle_rounded
-                    : Icons.schedule_rounded,
-                color: checkedIn
-                    ? AppColors.success
-                    : AppColors.muted,
-                size: 24,
+          // Today's work hours
+          Container(
+            width: double.infinity,
+            padding: AppPaddings.all16,
+            margin: const EdgeInsets.only(bottom: 16),
+            decoration: BoxDecoration(
+              color: const Color(0xFFEFF6FF),
+              borderRadius: Sizes.radius16,
+              border: Border.all(
+                color: const Color(0xFFBFDBFE),
               ),
-              Sizes.gapW10,
-              Expanded(
-                child: Text(
-                  checkedIn ? l10n.checkIn : l10n.checkOut,
-                  style: TextStyles.sectionHeader,
+            ),
+            child: Row(
+              children: [
+                const Icon(
+                  Icons.schedule_rounded,
+                  color: AppColors.blue,
+                  size: 26,
                 ),
-              ),
-            ],
+                Sizes.gapW12,
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        "Today's work hours",
+                        style: TextStyle(
+                          color: AppColors.textSecondary,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      Sizes.gapH4,
+                      Text(
+                        _formatDuration(_totalDuration),
+                        style: const TextStyle(
+                          color: AppColors.textPrimary,
+                          fontSize: 22,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
           ),
-          Sizes.gapH18,
+
+          // Check In / Check Out button
           SizedBox(
             width: double.infinity,
             height: Sizes.buttonHeight,
@@ -1249,6 +1312,7 @@ class _HomeScreenState extends State<HomeScreen>
               ),
             ),
           ),
+
           if (!_officeConfigured) ...[
             Sizes.gapH10,
             Text(

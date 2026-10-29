@@ -116,7 +116,6 @@ class SplashScreen extends StatelessWidget {
 
                       const Spacer(flex: 3),
 
-                      // Loading indicator
                       const SizedBox(
                         width: Sizes.p24,
                         height: Sizes.p24,

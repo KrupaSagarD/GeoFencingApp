@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_background_geofencing/flutter_background_geofencing.dart';
 
 import '../../../../core/geofence_debug.dart';
+import 'notification_service.dart';
 
 typedef OfficeExitCallback = Future<bool> Function(DateTime eventTime);
 
@@ -203,8 +204,12 @@ class OfficeGeofencingService {
       if (success) {
         _lastHandledExitEvent = event.timestamp;
 
+        await NotificationService.instance.showAutoCheckoutNotification(
+          event.timestamp,
+        );
+
         GeofenceDebug.show(
-          'SUCCESS: Automatic checkout saved!',
+          'SUCCESS: Automatic checkout saved and notification sent!',
         );
       } else {
         GeofenceDebug.show(

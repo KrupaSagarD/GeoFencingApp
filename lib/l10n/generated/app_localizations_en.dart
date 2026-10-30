@@ -532,4 +532,74 @@ class AppLocalizationsEn extends AppLocalizations {
   String sessionCountHint(int count) {
     return '$count sessions · Tap to view details';
   }
+
+  @override
+  String get locationSetupTitle => 'Set up your location';
+
+  @override
+  String get locationSetupDescription =>
+      'OfficeCheck needs location access to verify your office attendance.';
+
+  @override
+  String get foregroundLocationTitle => 'Device and foreground location';
+
+  @override
+  String get foregroundLocationDescription =>
+      'Turn on device location and allow the app to access your location while in use.';
+
+  @override
+  String get deviceLocationOff => 'Device location is off';
+
+  @override
+  String get permissionRequired => 'Permission required';
+
+  @override
+  String get backgroundLocationTitle => 'Background location';
+
+  @override
+  String get backgroundLocationDescription =>
+      'Select \"Allow all the time\" in App Settings so office entry and exit can be detected when the app is not open.';
+
+  @override
+  String get alwaysAllowed => 'Always allowed';
+
+  @override
+  String get backgroundMonitoringRequired =>
+      'Required for background monitoring';
+
+  @override
+  String get notificationsDescription =>
+      'Receive attendance reminders and location event notifications. You can enable these later.';
+
+  @override
+  String get notificationsEnabled => 'Notifications enabled';
+
+  @override
+  String get optional => 'Optional';
+
+  @override
+  String get enable => 'Enable';
+
+  @override
+  String get continueToOfficeCheck => 'Continue to OfficeCheck';
+
+  @override
+  String get permissionRefreshError =>
+      'Unable to check permissions. Please try again.';
+
+  @override
+  String get locationEnableError =>
+      'Could not enable location. Please check App Settings.';
+
+  @override
+  String get backgroundLocationError =>
+      'Could not open location settings. Please try again.';
+
+  @override
+  String get continuePermissionError =>
+      'Enable device location and grant \"Allow all the time\" to continue.';
+
+  @override
+  String get backgroundLocationNote =>
+      'Background location is required for automatic office-exit detection. Notifications are optional.';
 }

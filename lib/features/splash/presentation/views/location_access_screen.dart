@@ -1,9 +1,10 @@
-
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:permission_handler/permission_handler.dart';
 
 import '../../../../core/contants/colors.dart';
+import '../../../../core/localization/app_locale.dart';
+import '../../../../l10n/generated/app_localizations.dart';
 import '../../../location/data/services/attendance_service.dart';
 import '../../../location/data/services/geofencing_service.dart';
 import 'home_screen.dart';
@@ -12,8 +13,7 @@ class LocationAccessScreen extends StatefulWidget {
   const LocationAccessScreen({super.key});
 
   @override
-  State<LocationAccessScreen> createState() =>
-      _LocationAccessScreenState();
+  State<LocationAccessScreen> createState() => _LocationAccessScreenState();
 }
 
 class _LocationAccessScreenState extends State<LocationAccessScreen>
@@ -31,6 +31,8 @@ class _LocationAccessScreenState extends State<LocationAccessScreen>
   bool _isLoading = true;
   bool _isContinuing = false;
   String? _errorMessage;
+
+  AppLocalizations get l10n => AppLocalizations.of(context);
 
   bool get _hasForegroundPermission =>
       _locationPermission == LocationPermission.whileInUse ||
@@ -64,6 +66,57 @@ class _LocationAccessScreenState extends State<LocationAccessScreen>
     }
   }
 
+  Widget _buildLanguageSelector() {
+    return Align(
+      alignment: Alignment.centerRight,
+      child: ValueListenableBuilder<Locale>(
+        valueListenable: AppLocale.locale,
+        builder: (context, locale, child) {
+          return Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            decoration: BoxDecoration(
+              color: AppColors.panel,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: AppColors.borderSubtle,
+              ),
+            ),
+            child: DropdownButtonHideUnderline(
+              child: DropdownButton<String>(
+                value: locale.languageCode,
+                dropdownColor: AppColors.panel,
+                icon: const Icon(
+                  Icons.keyboard_arrow_down_rounded,
+                  color: AppColors.textSecondary,
+                ),
+                style: const TextStyle(
+                  color: AppColors.textPrimary,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                ),
+                items: const [
+                  DropdownMenuItem(
+                    value: 'en',
+                    child: Text('English'),
+                  ),
+                  DropdownMenuItem(
+                    value: 'ja',
+                    child: Text('日本語'),
+                  ),
+                ],
+                onChanged: (value) {
+                  if (value != null) {
+                    AppLocale.changeLocale(value);
+                  }
+                },
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
   Future<void> _refreshPermissions() async {
     try {
       final results = await Future.wait<Object>([
@@ -90,8 +143,7 @@ class _LocationAccessScreenState extends State<LocationAccessScreen>
 
       setState(() {
         _isLoading = false;
-        _errorMessage =
-        'Unable to check permissions. Please try again.';
+        _errorMessage = l10n.permissionRefreshError;
       });
     }
   }
@@ -131,8 +183,7 @@ class _LocationAccessScreenState extends State<LocationAccessScreen>
       if (!mounted) return;
 
       setState(() {
-        _errorMessage =
-        'Could not enable location. Please check App Settings.';
+        _errorMessage = l10n.locationEnableError;
       });
     } finally {
       if (mounted) {
@@ -177,8 +228,7 @@ class _LocationAccessScreenState extends State<LocationAccessScreen>
       if (!mounted) return;
 
       setState(() {
-        _errorMessage =
-        'Could not open location settings. Please try again.';
+        _errorMessage = l10n.backgroundLocationError;
       });
     } finally {
       if (mounted) {
@@ -245,9 +295,7 @@ class _LocationAccessScreenState extends State<LocationAccessScreen>
 
       if (!_requiredPermissionsGranted) {
         setState(() {
-          _errorMessage =
-          'Enable device location and grant "Allow all the time" '
-              'to continue.';
+          _errorMessage = l10n.continuePermissionError;
           _isContinuing = false;
         });
         return;
@@ -273,9 +321,7 @@ class _LocationAccessScreenState extends State<LocationAccessScreen>
       if (!mounted) return;
 
       setState(() {
-        _errorMessage =
-        'Could not start background location monitoring. '
-            'Please check your permissions and try again.';
+        _errorMessage = l10n.geofenceStartError;
         _isContinuing = false;
       });
     }
@@ -289,8 +335,7 @@ class _LocationAccessScreenState extends State<LocationAccessScreen>
     required String status,
     required VoidCallback onPressed,
     bool optional = false,
-  })
-  {
+  }) {
     final statusColor = isGranted
         ? AppColors.success
         : optional
@@ -388,7 +433,7 @@ class _LocationAccessScreenState extends State<LocationAccessScreen>
                             vertical: 4,
                           ),
                         ),
-                        child: const Text('Enable'),
+                        child: Text(l10n.enable),
                       ),
                   ],
                 ),
@@ -446,12 +491,14 @@ class _LocationAccessScreenState extends State<LocationAccessScreen>
                       ),
                     ),
                   ),
+                  _buildLanguageSelector(),
+                  const SizedBox(height: 16),
                   const SizedBox(height: 10),
-                  const Center(
+                  Center(
                     child: Text(
-                      'Set up your location',
+                      l10n.locationSetupTitle,
                       textAlign: TextAlign.center,
-                      style: TextStyle(
+                      style: const TextStyle(
                         color: AppColors.textPrimary,
                         fontSize: 26,
                         fontWeight: FontWeight.w800,
@@ -459,12 +506,11 @@ class _LocationAccessScreenState extends State<LocationAccessScreen>
                     ),
                   ),
                   const SizedBox(height: 10),
-                  const Center(
+                  Center(
                     child: Text(
-                      'OfficeCheck needs location access to verify '
-                          'your office attendance.',
+                      l10n.locationSetupDescription,
                       textAlign: TextAlign.center,
-                      style: TextStyle(
+                      style: const TextStyle(
                         color: AppColors.muted,
                         fontSize: 14,
                         height: 1.6,
@@ -484,41 +530,34 @@ class _LocationAccessScreenState extends State<LocationAccessScreen>
                   else ...[
                     _buildPermissionCard(
                       icon: Icons.my_location_rounded,
-                      title: 'Device and foreground location',
-                      description:
-                      'Turn on device location and allow the app '
-                          'to access your location while in use.',
+                      title: l10n.foregroundLocationTitle,
+                      description: l10n.foregroundLocationDescription,
                       isGranted: locationReady,
                       status: !_locationServicesEnabled
-                          ? 'Device location is off'
+                          ? l10n.deviceLocationOff
                           : _hasForegroundPermission
-                          ? 'Location access enabled'
-                          : 'Permission required',
+                          ? l10n.locationAccessEnabled
+                          : l10n.permissionRequired,
                       onPressed: _enableLocation,
                     ),
                     _buildPermissionCard(
                       icon: Icons.location_searching_rounded,
-                      title: 'Background location',
-                      description:
-                      'Select "Allow all the time" in App Settings '
-                          'so office entry and exit can be detected '
-                          'when the app is not open.',
+                      title: l10n.backgroundLocationTitle,
+                      description: l10n.backgroundLocationDescription,
                       isGranted: _hasBackgroundPermission,
                       status: _hasBackgroundPermission
-                          ? 'Always allowed'
-                          : 'Required for background monitoring',
+                          ? l10n.alwaysAllowed
+                          : l10n.backgroundMonitoringRequired,
                       onPressed: _enableBackgroundLocation,
                     ),
                     _buildPermissionCard(
                       icon: Icons.notifications_active_outlined,
-                      title: 'Notifications',
-                      description:
-                      'Receive attendance reminders and location '
-                          'event notifications. You can enable these later.',
+                      title: l10n.notificationsTitle,
+                      description: l10n.notificationsDescription,
                       isGranted: _notificationsEnabled,
                       status: _notificationsEnabled
-                          ? 'Notifications enabled'
-                          : 'Optional',
+                          ? l10n.notificationsEnabled
+                          : l10n.optional,
                       onPressed: _enableNotifications,
                       optional: true,
                     ),
@@ -574,9 +613,9 @@ class _LocationAccessScreenState extends State<LocationAccessScreen>
                           color: AppColors.white,
                         ),
                       )
-                          : const Text(
-                        'Continue to OfficeCheck',
-                        style: TextStyle(
+                          : Text(
+                        l10n.continueToOfficeCheck,
+                        style: const TextStyle(
                           fontSize: 15,
                           fontWeight: FontWeight.w700,
                         ),
@@ -584,12 +623,11 @@ class _LocationAccessScreenState extends State<LocationAccessScreen>
                     ),
                   ),
                   const SizedBox(height: 8),
-                  const Center(
+                  Center(
                     child: Text(
-                      'Background location is required for automatic '
-                          'office-exit detection. Notifications are optional.',
+                      l10n.backgroundLocationNote,
                       textAlign: TextAlign.center,
-                      style: TextStyle(
+                      style: const TextStyle(
                         color: AppColors.muted,
                         fontSize: 11,
                         height: 1.6,

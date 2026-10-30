@@ -6,14 +6,12 @@ class NotificationService {
 
   static final NotificationService instance = NotificationService._();
 
-  final FlutterLocalNotificationsPlugin _plugin =
-  FlutterLocalNotificationsPlugin();
+  final FlutterLocalNotificationsPlugin _plugin = FlutterLocalNotificationsPlugin();
 
   static const String _channelId = 'attendance_notifications';
 
   Future<void> initialize() async {
-    const androidSettings =
-    AndroidInitializationSettings('@mipmap/ic_launcher');
+    const androidSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
 
     const settings = InitializationSettings(
       android: androidSettings,

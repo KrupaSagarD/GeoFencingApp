@@ -1,4 +1,3 @@
-
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
@@ -10,7 +9,9 @@ import 'notification_service.dart';
 typedef OfficeExitCallback = Future<bool> Function(DateTime eventTime);
 
 class OfficeGeofencingService {
-  OfficeGeofencingService();
+  OfficeGeofencingService._internal();
+  static final OfficeGeofencingService instance = OfficeGeofencingService._internal();
+  factory OfficeGeofencingService() => instance;
 
   final GeofencingService _service = GeofencingService();
 
@@ -26,6 +27,14 @@ class OfficeGeofencingService {
 
   // Use 100 m while testing. A 50 m radius can be unreliable.
   static const double _geofenceRadiusMeters = 100;
+
+  bool get isStarted => _isStarted;
+
+  void resetExitState() {
+    _isHandlingExit = false;
+    _lastHandledExitEvent = null;
+    debugPrint('OfficeGeofencingService: Exit state reset');
+  }
 
   Future<void> start({
     required double latitude,
@@ -71,12 +80,12 @@ class OfficeGeofencingService {
       await _eventSubscription?.cancel();
 
       _eventSubscription = _service.onGeofenceEvent.listen(
-            (event) {
+        (event) {
           debugPrint(
             'GEOFENCE EVENT: '
-                'type=${event.type}, '
-                'region=${event.regionId}, '
-                'timestamp=${event.timestamp}',
+            'type=${event.type}, '
+            'region=${event.regionId}, '
+            'timestamp=${event.timestamp}',
           );
 
           unawaited(_handleGeofenceEvent(event));
@@ -87,28 +96,7 @@ class OfficeGeofencingService {
         },
       );
 
-      final serviceStarted = await _service.startService(
-        notificationTitle: 'OfficeCheck is active',
-        notificationText: 'Monitoring the office geofence',
-        enableFallbackNotifications: true,
-        fallbackNotificationTitle: 'OfficeCheck location alert',
-        fallbackNotificationBody: 'A geofence event occurred near your office.',
-      );
-
-      GeofenceDebug.show(
-        serviceStarted
-            ? '3/5: Background geofencing service started'
-            : 'ERROR: Background service failed to start',
-        isError: !serviceStarted,
-      );
-
-      debugPrint('Geofencing service started: $serviceStarted');
-
-      if (!serviceStarted) {
-        throw StateError('Background geofencing service failed to start.');
-      }
-
-      // Re-register the office region and check the result.
+      // Re-register the office region BEFORE starting the service so native GeofencingClient has regions immediately.
       await _service.removeGeofence(_officeRegionId);
 
       final registered = await _service.addGeofence(
@@ -122,18 +110,39 @@ class OfficeGeofencingService {
       );
       GeofenceDebug.show(
         registered
-            ? '4/5: Office geofence registered (100m)'
+            ? '3/5: Office geofence registered (100m)'
             : 'ERROR: Office geofence registration failed',
         isError: !registered,
       );
 
       debugPrint(
         'Office geofence registration result: $registered '
-            '(radius: $_geofenceRadiusMeters m)',
+        '(radius: $_geofenceRadiusMeters m)',
       );
 
       if (!registered) {
         throw StateError('Office geofence registration failed.');
+      }
+
+      final serviceStarted = await _service.startService(
+        notificationTitle: 'OfficeCheck is active',
+        notificationText: 'Monitoring the office geofence',
+        enableFallbackNotifications: true,
+        fallbackNotificationTitle: 'OfficeCheck location alert',
+        fallbackNotificationBody: 'A geofence event occurred near your office.',
+      );
+
+      GeofenceDebug.show(
+        serviceStarted
+            ? '4/5: Background geofencing service started'
+            : 'ERROR: Background service failed to start',
+        isError: !serviceStarted,
+      );
+
+      debugPrint('Geofencing service started: $serviceStarted');
+
+      if (!serviceStarted) {
+        throw StateError('Background geofencing service failed to start.');
       }
 
       _isStarted = true;
@@ -161,6 +170,7 @@ class OfficeGeofencingService {
     switch (event.type) {
       case GeofenceEventType.enter:
         GeofenceDebug.show('ENTER: You entered the office area');
+        resetExitState();
         break;
 
       case GeofenceEventType.exit:
@@ -189,7 +199,7 @@ class OfficeGeofencingService {
       return;
     }
 
-    if (_lastHandledExitEvent == event.timestamp) {
+    if (_lastHandledExitEvent != null && _lastHandledExitEvent == event.timestamp) {
       GeofenceDebug.show('Duplicate EXIT event ignored');
       return;
     }
@@ -199,7 +209,8 @@ class OfficeGeofencingService {
     try {
       GeofenceDebug.show('Checkout triggered. Processing attendance...');
 
-      final success = await callback(event.timestamp);
+      final success = await callback(event.timestamp)
+          .timeout(const Duration(seconds: 10), onTimeout: () => false);
 
       if (success) {
         _lastHandledExitEvent = event.timestamp;
@@ -229,6 +240,7 @@ class OfficeGeofencingService {
       _isHandlingExit = false;
     }
   }
+
   Future<void> stop() async {
     await _eventSubscription?.cancel();
     _eventSubscription = null;

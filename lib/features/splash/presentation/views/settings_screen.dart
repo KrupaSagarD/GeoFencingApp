@@ -145,13 +145,6 @@ class _SettingsScreenState extends State<SettingsScreen> with WidgetsBindingObse
           _sectionTitle(context, l10n.settingsPermissions),
           _settingsCard(
             context: context,
-            icon: Icons.location_on_outlined,
-            title: l10n.settingsLocationAccess,
-            subtitle: l10n.settingsLocationAccessSubtitle,
-            onTap: _openDeviceSettings,
-          ),
-          _settingsCard(
-            context: context,
             icon: Icons.settings_applications_outlined,
             title: l10n.settingsAppPermissions,
             subtitle: l10n.settingsAppPermissionsSubtitle,
@@ -159,20 +152,6 @@ class _SettingsScreenState extends State<SettingsScreen> with WidgetsBindingObse
           ),
           Sizes.gapH24,
           _sectionTitle(context, l10n.settingsAbout),
-          _settingsCard(
-            context: context,
-            icon: Icons.info_outline_rounded,
-            title: l10n.settingsAboutApp,
-            subtitle: l10n.settingsAboutSubtitle,
-            onTap: () {
-              showAboutDialog(
-                context: context,
-                applicationName: l10n.settingsAboutApp,
-                applicationVersion: '1.0.0',
-                applicationLegalese: l10n.settingsAppDescription,
-              );
-            },
-          ),
           Sizes.gapH16,
           Text(
             l10n.settingsAppDescription,

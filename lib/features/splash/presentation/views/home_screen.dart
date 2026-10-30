@@ -10,6 +10,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../../../core/contants/constants.dart';
 import '../../../../l10n/generated/app_localizations.dart';
 import '../../../location/data/services/attendance_service.dart';
+import '../../../location/data/services/geofencing_service.dart';
+import '../../../location/data/services/notification_service.dart';
 import 'attendence_history_screen.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -36,6 +38,7 @@ class _HomeScreenState extends State<HomeScreen>
   bool _isCheckedIn = false;
 
   Timer? _workHoursTimer;
+  bool _isAutoCheckingOut = false;
 
   String? _locationMessage;
 
@@ -106,6 +109,19 @@ class _HomeScreenState extends State<HomeScreen>
 
     unawaited(_initializeHome());
 
+    // Ensure background geofencing service is active and listening
+    if (!OfficeGeofencingService.instance.isStarted && _officeConfigured) {
+      OfficeGeofencingService.instance.start(
+        latitude: officeLatitude,
+        longitude: officeLongitude,
+        onOfficeExit: (DateTime eventTime) async {
+          return AttendanceService.autoCheckout(eventTime);
+        },
+      ).catchError((Object error) {
+        debugPrint('OfficeGeofencingService start in HomeScreen error: $error');
+      });
+    }
+
     _startLiveLocationUpdates();
 
     _workHoursTimer = Timer.periodic(
@@ -158,12 +174,13 @@ class _HomeScreenState extends State<HomeScreen>
       locationSettings: locationSettings,
     ).listen(
       (Position position) {
-        if (!mounted || position.isMocked) return;
+        // if (!mounted || position.isMocked) return;
         setState(() {
           _position = position;
           _locationMessage = null;
           _isLoadingLocation = false;
         });
+        unawaited(_checkAutoCheckout(position));
       },
       onError: (dynamic error) {
         debugPrint('Location stream update error: $error');
@@ -204,6 +221,7 @@ class _HomeScreenState extends State<HomeScreen>
   Future<void> _loadAttendance() async {
     try {
       final prefs = await SharedPreferences.getInstance();
+      await prefs.reload();
       final today = _dateKey(DateTime.now());
 
       final rawHistory = prefs.getString(_historyKey);
@@ -347,13 +365,13 @@ class _HomeScreenState extends State<HomeScreen>
 
     // Try last known position first for quick rendering without delay
     Position? pos = await Geolocator.getLastKnownPosition();
-    if (pos != null && !pos.isMocked) {
-      final lastKnownAge = DateTime.now().difference(pos.timestamp).abs();
-      if (lastKnownAge <= const Duration(minutes: 5)) {
-        // Return recent cached location immediately
-        return pos;
-      }
-    }
+    // if (pos != null && !pos.isMocked) {
+    //   final lastKnownAge = DateTime.now().difference(pos.timestamp).abs();
+    //   if (lastKnownAge <= const Duration(minutes: 5)) {
+    //     // Return recent cached location immediately
+    //     return pos;
+    //   }
+    // }
 
     final position = await Geolocator.getCurrentPosition(
       locationSettings: const LocationSettings(
@@ -362,11 +380,55 @@ class _HomeScreenState extends State<HomeScreen>
       ),
     );
 
-    if (position.isMocked) {
-      throw Exception(l10n.mockLocationDetected);
-    }
+    // if (position.isMocked) {
+    //   throw Exception(l10n.mockLocationDetected);
+    // }
 
     return position;
+  }
+
+  Future<void> _checkAutoCheckout(Position? position) async {
+    if (position == null ||
+        !_isCheckedIn ||
+        !_officeConfigured ||
+        _isSubmittingAttendance ||
+        _isAutoCheckingOut) {
+      return;
+    }
+
+    final distance = Geolocator.distanceBetween(
+      position.latitude,
+      position.longitude,
+      officeLatitude,
+      officeLongitude,
+    );
+
+    if (distance > _geofenceRadiusMeters) {
+      _isAutoCheckingOut = true;
+      try {
+        debugPrint(
+          'HomeScreen: Auto checkout triggered! User is $distance m away (radius: $_geofenceRadiusMeters m).',
+        );
+        final now = DateTime.now();
+        final success = await AttendanceService.autoCheckout(now);
+        if (success) {
+          OfficeGeofencingService.instance.resetExitState();
+          await NotificationService.instance.showAutoCheckoutNotification(now);
+          await _loadAttendance();
+          if (mounted) {
+            _showAttendanceDialog(
+              title: 'Auto Check-Out',
+              message: 'You have left the office zone. Automatic check-out recorded.',
+              isSuccess: true,
+            );
+          }
+        }
+      } catch (error) {
+        debugPrint('Auto checkout error: $error');
+      } finally {
+        _isAutoCheckingOut = false;
+      }
+    }
   }
 
   Future<void> _refreshLocation() async {
@@ -389,6 +451,10 @@ class _HomeScreenState extends State<HomeScreen>
         _locationMessage =
         _officeConfigured ? null : l10n.setOfficeCoordinates;
       });
+
+      if (position != null) {
+        await _checkAutoCheckout(position);
+      }
     } catch (error) {
       if (!mounted) return;
 
@@ -556,6 +622,10 @@ class _HomeScreenState extends State<HomeScreen>
       }
 
       if (!mounted) return;
+
+      if (checkedIn) {
+        OfficeGeofencingService.instance.resetExitState();
+      }
 
       final message = checkedIn ? l10n.checkInRecorded : l10n.checkOutRecorded;
 

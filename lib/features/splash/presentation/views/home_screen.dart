@@ -9,6 +9,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../../core/contants/constants.dart';
 import '../../../../l10n/generated/app_localizations.dart';
+import '../../../location/data/services/attendance_service.dart';
 import 'attendence_history_screen.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -96,9 +97,17 @@ class _HomeScreenState extends State<HomeScreen>
   @override
   void initState() {
     super.initState();
+
     WidgetsBinding.instance.addObserver(this);
+
+    AttendanceService.attendanceVersion.addListener(
+      _onAttendanceChanged,
+    );
+
     unawaited(_initializeHome());
+
     _startLiveLocationUpdates();
+
     _workHoursTimer = Timer.periodic(
       const Duration(minutes: 1),
           (_) {
@@ -111,9 +120,14 @@ class _HomeScreenState extends State<HomeScreen>
 
   @override
   void dispose() {
+    AttendanceService.attendanceVersion.removeListener(
+      _onAttendanceChanged,
+    );
+
     _positionStreamSubscription?.cancel();
     WidgetsBinding.instance.removeObserver(this);
     _workHoursTimer?.cancel();
+
     super.dispose();
   }
 
@@ -125,6 +139,12 @@ class _HomeScreenState extends State<HomeScreen>
     } else if (state == AppLifecycleState.paused) {
       _positionStreamSubscription?.cancel();
     }
+  }
+
+  void _onAttendanceChanged() {
+    if (!mounted) return;
+
+    unawaited(_loadAttendance());
   }
 
   void _startLiveLocationUpdates() {
@@ -1044,7 +1064,6 @@ class _HomeScreenState extends State<HomeScreen>
               //     ],
               //   ),
               // ),
-
 
               OutlinedButton.icon(
                 onPressed: _openAttendanceHistory,

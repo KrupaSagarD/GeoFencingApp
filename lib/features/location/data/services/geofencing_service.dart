@@ -4,7 +4,9 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_background_geofencing/flutter_background_geofencing.dart';
 
-typedef OfficeExitCallback = Future<void> Function(DateTime eventTime);
+import '../../../../core/geofence_debug.dart';
+
+typedef OfficeExitCallback = Future<bool> Function(DateTime eventTime);
 
 class OfficeGeofencingService {
   OfficeGeofencingService();
@@ -38,6 +40,12 @@ class OfficeGeofencingService {
 
     try {
       final initialized = await _service.initialize();
+      GeofenceDebug.show(
+        initialized
+            ? '1/5: Geofencing initialized'
+            : 'ERROR: Geofencing initialization failed',
+        isError: !initialized,
+      );
       debugPrint('Geofencing initialized: $initialized');
 
       if (!initialized) {
@@ -45,6 +53,13 @@ class OfficeGeofencingService {
       }
 
       final hasPermissions = await _service.requestPermissions();
+
+      GeofenceDebug.show(
+        hasPermissions
+            ? '2/5: Geofencing permissions granted'
+            : 'ERROR: Geofencing permissions denied',
+        isError: !hasPermissions,
+      );
       debugPrint('Geofencing permissions granted: $hasPermissions');
 
       if (!hasPermissions) {
@@ -76,8 +91,14 @@ class OfficeGeofencingService {
         notificationText: 'Monitoring the office geofence',
         enableFallbackNotifications: true,
         fallbackNotificationTitle: 'OfficeCheck location alert',
-        fallbackNotificationBody:
-        'A geofence event occurred near your office.',
+        fallbackNotificationBody: 'A geofence event occurred near your office.',
+      );
+
+      GeofenceDebug.show(
+        serviceStarted
+            ? '3/5: Background geofencing service started'
+            : 'ERROR: Background service failed to start',
+        isError: !serviceStarted,
       );
 
       debugPrint('Geofencing service started: $serviceStarted');
@@ -98,6 +119,12 @@ class OfficeGeofencingService {
           data: {'name': 'Office'},
         ),
       );
+      GeofenceDebug.show(
+        registered
+            ? '4/5: Office geofence registered (100m)'
+            : 'ERROR: Office geofence registration failed',
+        isError: !registered,
+      );
 
       debugPrint(
         'Office geofence registration result: $registered '
@@ -109,6 +136,7 @@ class OfficeGeofencingService {
       }
 
       _isStarted = true;
+      GeofenceDebug.show('5/5: OfficeCheck geofencing is ACTIVE');
       debugPrint('Office geofencing startup completed.');
     } catch (error, stackTrace) {
       debugPrint('Failed to start office geofencing: $error');
@@ -131,16 +159,16 @@ class OfficeGeofencingService {
 
     switch (event.type) {
       case GeofenceEventType.enter:
-        debugPrint('Office geofence ENTER detected.');
+        GeofenceDebug.show('ENTER: You entered the office area');
         break;
 
       case GeofenceEventType.exit:
-        debugPrint('Office geofence EXIT detected.');
+        GeofenceDebug.show('EXIT: You left the office area');
         await _handleOfficeExit(event);
         break;
 
       default:
-        debugPrint('Other office geofence event: ${event.type}');
+        GeofenceDebug.show('Other geofence event: ${event.type}');
     }
   }
 
@@ -148,40 +176,54 @@ class OfficeGeofencingService {
     final callback = _onOfficeExit;
 
     if (callback == null) {
-      debugPrint(
-        'EXIT RECEIVED, BUT CHECKOUT CALLBACK IS NOT CONFIGURED.',
+      GeofenceDebug.show(
+        'ERROR: Checkout callback is not configured',
+        isError: true,
       );
       return;
     }
 
     if (_isHandlingExit) {
-      debugPrint('Duplicate exit ignored: checkout is in progress.');
+      GeofenceDebug.show('Duplicate EXIT ignored: checkout is processing');
       return;
     }
 
     if (_lastHandledExitEvent == event.timestamp) {
-      debugPrint('Duplicate exit event ignored.');
+      GeofenceDebug.show('Duplicate EXIT event ignored');
       return;
     }
 
     _isHandlingExit = true;
 
     try {
-      debugPrint('Running automatic checkout callback.');
+      GeofenceDebug.show('Checkout triggered. Processing attendance...');
 
-      await callback(event.timestamp);
+      final success = await callback(event.timestamp);
 
-      _lastHandledExitEvent = event.timestamp;
+      if (success) {
+        _lastHandledExitEvent = event.timestamp;
 
-      debugPrint('Automatic checkout callback returned successfully.');
+        GeofenceDebug.show(
+          'SUCCESS: Automatic checkout saved!',
+        );
+      } else {
+        GeofenceDebug.show(
+          'FAILED: No active attendance session or save failed',
+          isError: true,
+        );
+      }
     } catch (error, stackTrace) {
       debugPrint('AUTOMATIC CHECKOUT FAILED: $error');
       debugPrintStack(stackTrace: stackTrace);
+
+      GeofenceDebug.show(
+        'Checkout error: $error',
+        isError: true,
+      );
     } finally {
       _isHandlingExit = false;
     }
   }
-
   Future<void> stop() async {
     await _eventSubscription?.cancel();
     _eventSubscription = null;

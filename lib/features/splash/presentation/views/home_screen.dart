@@ -11,6 +11,7 @@ import '../../../../core/contants/constants.dart';
 import '../../../../l10n/generated/app_localizations.dart';
 import '../../../location/data/services/attendance_service.dart';
 import '../../../location/data/services/geofencing_service.dart';
+import '../../../location/data/services/native_geofence_service.dart';
 import '../../../location/data/services/notification_service.dart';
 import 'attendence_history_screen.dart';
 
@@ -625,6 +626,13 @@ class _HomeScreenState extends State<HomeScreen>
 
       if (checkedIn) {
         OfficeGeofencingService.instance.resetExitState();
+        unawaited(
+          NativeGeofenceService.registerGeofence(
+            latitude: officeLatitude,
+            longitude: officeLongitude,
+            radiusMeters: _geofenceRadiusMeters,
+          ),
+        );
       }
 
       final message = checkedIn ? l10n.checkInRecorded : l10n.checkOutRecorded;

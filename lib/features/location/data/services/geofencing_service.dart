@@ -4,7 +4,9 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_background_geofencing/flutter_background_geofencing.dart';
 
 import '../../../../core/geofence_debug.dart';
+import 'native_geofence_service.dart';
 import 'notification_service.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 typedef OfficeExitCallback = Future<bool> Function(DateTime eventTime);
 
@@ -76,7 +78,6 @@ class OfficeGeofencingService {
         throw StateError('Geofencing permissions were not granted.');
       }
 
-      // Subscribe before registering the region.
       await _eventSubscription?.cancel();
 
       _eventSubscription = _service.onGeofenceEvent.listen(
@@ -96,7 +97,6 @@ class OfficeGeofencingService {
         },
       );
 
-      // Re-register the office region BEFORE starting the service so native GeofencingClient has regions immediately.
       await _service.removeGeofence(_officeRegionId);
 
       final registered = await _service.addGeofence(
@@ -144,6 +144,20 @@ class OfficeGeofencingService {
       if (!serviceStarted) {
         throw StateError('Background geofencing service failed to start.');
       }
+
+      try {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString('office_lat', latitude.toString());
+        await prefs.setString('office_lng', longitude.toString());
+      } catch (e) {
+        debugPrint('Failed to save office coordinates: $e');
+      }
+
+      await NativeGeofenceService.registerGeofence(
+        latitude: latitude,
+        longitude: longitude,
+        radiusMeters: _geofenceRadiusMeters,
+      );
 
       _isStarted = true;
       GeofenceDebug.show('5/5: OfficeCheck geofencing is ACTIVE');
@@ -242,6 +256,8 @@ class OfficeGeofencingService {
   }
 
   Future<void> stop() async {
+    await NativeGeofenceService.removeGeofence();
+
     await _eventSubscription?.cancel();
     _eventSubscription = null;
 

@@ -1045,6 +1045,126 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{count} sessions · Tap to view details'**
   String sessionCountHint(int count);
+
+  /// No description provided for @locationSetupTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Set up your location'**
+  String get locationSetupTitle;
+
+  /// No description provided for @locationSetupDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'OfficeCheck needs location access to verify your office attendance.'**
+  String get locationSetupDescription;
+
+  /// No description provided for @foregroundLocationTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Device and foreground location'**
+  String get foregroundLocationTitle;
+
+  /// No description provided for @foregroundLocationDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Turn on device location and allow the app to access your location while in use.'**
+  String get foregroundLocationDescription;
+
+  /// No description provided for @deviceLocationOff.
+  ///
+  /// In en, this message translates to:
+  /// **'Device location is off'**
+  String get deviceLocationOff;
+
+  /// No description provided for @permissionRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Permission required'**
+  String get permissionRequired;
+
+  /// No description provided for @backgroundLocationTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Background location'**
+  String get backgroundLocationTitle;
+
+  /// No description provided for @backgroundLocationDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Select \"Allow all the time\" in App Settings so office entry and exit can be detected when the app is not open.'**
+  String get backgroundLocationDescription;
+
+  /// No description provided for @alwaysAllowed.
+  ///
+  /// In en, this message translates to:
+  /// **'Always allowed'**
+  String get alwaysAllowed;
+
+  /// No description provided for @backgroundMonitoringRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Required for background monitoring'**
+  String get backgroundMonitoringRequired;
+
+  /// No description provided for @notificationsDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Receive attendance reminders and location event notifications. You can enable these later.'**
+  String get notificationsDescription;
+
+  /// No description provided for @notificationsEnabled.
+  ///
+  /// In en, this message translates to:
+  /// **'Notifications enabled'**
+  String get notificationsEnabled;
+
+  /// No description provided for @optional.
+  ///
+  /// In en, this message translates to:
+  /// **'Optional'**
+  String get optional;
+
+  /// No description provided for @enable.
+  ///
+  /// In en, this message translates to:
+  /// **'Enable'**
+  String get enable;
+
+  /// No description provided for @continueToOfficeCheck.
+  ///
+  /// In en, this message translates to:
+  /// **'Continue to OfficeCheck'**
+  String get continueToOfficeCheck;
+
+  /// No description provided for @permissionRefreshError.
+  ///
+  /// In en, this message translates to:
+  /// **'Unable to check permissions. Please try again.'**
+  String get permissionRefreshError;
+
+  /// No description provided for @locationEnableError.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not enable location. Please check App Settings.'**
+  String get locationEnableError;
+
+  /// No description provided for @backgroundLocationError.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not open location settings. Please try again.'**
+  String get backgroundLocationError;
+
+  /// No description provided for @continuePermissionError.
+  ///
+  /// In en, this message translates to:
+  /// **'Enable device location and grant \"Allow all the time\" to continue.'**
+  String get continuePermissionError;
+
+  /// No description provided for @backgroundLocationNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Background location is required for automatic office-exit detection. Notifications are optional.'**
+  String get backgroundLocationNote;
 }
 
 class _AppLocalizationsDelegate

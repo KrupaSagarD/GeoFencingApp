@@ -179,6 +179,33 @@
         "type": "int"
       }
     }
-  }
+  },
+  "locationSetupTitle": "Set up your location",
+  "locationSetupDescription": "OfficeCheck needs location access to verify your office attendance.",
+
+  "foregroundLocationTitle": "Device and foreground location",
+  "foregroundLocationDescription": "Turn on device location and allow the app to access your location while in use.",
+  "deviceLocationOff": "Device location is off",
+  "permissionRequired": "Permission required",
+
+  "backgroundLocationTitle": "Background location",
+  "backgroundLocationDescription": "Select \"Allow all the time\" in App Settings so office entry and exit can be detected when the app is not open.",
+  "alwaysAllowed": "Always allowed",
+  "backgroundMonitoringRequired": "Required for background monitoring",
+
+  "notificationsDescription": "Receive attendance reminders and location event notifications. You can enable these later.",
+  "notificationsEnabled": "Notifications enabled",
+  "optional": "Optional",
+
+  "enable": "Enable",
+  "continueToOfficeCheck": "Continue to OfficeCheck",
+
+  "permissionRefreshError": "Unable to check permissions. Please try again.",
+  "locationEnableError": "Could not enable location. Please check App Settings.",
+  "backgroundLocationError": "Could not open location settings. Please try again.",
+  "continuePermissionError": "Enable device location and grant \"Allow all the time\" to continue.",
+
+  "backgroundLocationNote": "Background location is required for automatic office-exit detection. Notifications are optional."
+
 
 }

@@ -500,4 +500,69 @@ class AppLocalizationsJa extends AppLocalizations {
   String sessionCountHint(int count) {
     return '$count件のセッション · タップして詳細を表示';
   }
+
+  @override
+  String get locationSetupTitle => '位置情報を設定';
+
+  @override
+  String get locationSetupDescription =>
+      'OfficeCheckで勤務状況を確認するために、位置情報へのアクセスが必要です。';
+
+  @override
+  String get foregroundLocationTitle => '端末の位置情報';
+
+  @override
+  String get foregroundLocationDescription =>
+      '端末の位置情報をオンにして、アプリの使用中に位置情報へのアクセスを許可してください。';
+
+  @override
+  String get deviceLocationOff => '端末の位置情報がオフです';
+
+  @override
+  String get permissionRequired => '権限が必要です';
+
+  @override
+  String get backgroundLocationTitle => 'バックグラウンドでの位置情報';
+
+  @override
+  String get backgroundLocationDescription =>
+      'アプリを開いていないときもオフィスへの入退室を検知できるように、アプリの設定で「常に許可」を選択してください。';
+
+  @override
+  String get alwaysAllowed => '常に許可されています';
+
+  @override
+  String get backgroundMonitoringRequired => 'バックグラウンドでの監視に必要です';
+
+  @override
+  String get notificationsDescription =>
+      '勤怠リマインダーや位置情報に関する通知を受け取ります。この設定は後から変更できます。';
+
+  @override
+  String get notificationsEnabled => '通知が有効です';
+
+  @override
+  String get optional => '任意';
+
+  @override
+  String get enable => '有効にする';
+
+  @override
+  String get continueToOfficeCheck => 'OfficeCheckを続ける';
+
+  @override
+  String get permissionRefreshError => '権限を確認できませんでした。もう一度お試しください。';
+
+  @override
+  String get locationEnableError => '位置情報を有効にできませんでした。アプリの設定を確認してください。';
+
+  @override
+  String get backgroundLocationError => '位置情報の設定を開けませんでした。もう一度お試しください。';
+
+  @override
+  String get continuePermissionError => '続行するには、端末の位置情報をオンにして「常に許可」を設定してください。';
+
+  @override
+  String get backgroundLocationNote =>
+      'オフィスから出たことを自動的に検知するには、バックグラウンドでの位置情報の許可が必要です。通知の設定は任意です。';
 }

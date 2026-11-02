@@ -179,7 +179,34 @@
         "type": "int"
       }
     }
-  }
+  },
+  "locationSetupTitle": "位置情報を設定",
+  "locationSetupDescription": "OfficeCheckで勤務状況を確認するために、位置情報へのアクセスが必要です。",
+
+  "foregroundLocationTitle": "端末の位置情報",
+  "foregroundLocationDescription": "端末の位置情報をオンにして、アプリの使用中に位置情報へのアクセスを許可してください。",
+  "deviceLocationOff": "端末の位置情報がオフです",
+  "permissionRequired": "権限が必要です",
+
+  "backgroundLocationTitle": "バックグラウンドでの位置情報",
+  "backgroundLocationDescription": "アプリを開いていないときもオフィスへの入退室を検知できるように、アプリの設定で「常に許可」を選択してください。",
+  "alwaysAllowed": "常に許可されています",
+  "backgroundMonitoringRequired": "バックグラウンドでの監視に必要です",
+
+  "notificationsDescription": "勤怠リマインダーや位置情報に関する通知を受け取ります。この設定は後から変更できます。",
+  "notificationsEnabled": "通知が有効です",
+  "optional": "任意",
+
+  "enable": "有効にする",
+  "continueToOfficeCheck": "OfficeCheckを続ける",
+
+  "permissionRefreshError": "権限を確認できませんでした。もう一度お試しください。",
+  "locationEnableError": "位置情報を有効にできませんでした。アプリの設定を確認してください。",
+  "backgroundLocationError": "位置情報の設定を開けませんでした。もう一度お試しください。",
+  "continuePermissionError": "続行するには、端末の位置情報をオンにして「常に許可」を設定してください。",
+
+  "backgroundLocationNote": "オフィスから出たことを自動的に検知するには、バックグラウンドでの位置情報の許可が必要です。通知の設定は任意です。"
+
 
 
 }

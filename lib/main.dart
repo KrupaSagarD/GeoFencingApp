@@ -5,7 +5,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'core/contants/colors.dart';
+import 'core/geofence_debug.dart';
 import 'core/localization/app_locale.dart';
+import 'features/location/data/services/notification_service.dart';
 import 'features/splash/presentation/views/location_access_screen.dart';
 import 'features/splash/presentation/views/splash_screen.dart';
 import 'l10n/generated/app_localizations.dart';
@@ -14,6 +16,7 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   await AppLocale.loadSavedLocale();
+  await NotificationService.instance.initialize();
 
   runApp(
     const ProviderScope(
@@ -31,6 +34,7 @@ class OfficeCheckApp extends StatelessWidget {
       valueListenable: AppLocale.locale,
       builder: (context, locale, _) {
         return MaterialApp(
+          scaffoldMessengerKey: GeofenceDebug.messengerKey, // for testing purpose
           title: 'OfficeCheck',
           debugShowCheckedModeBanner: false,
           locale: locale,

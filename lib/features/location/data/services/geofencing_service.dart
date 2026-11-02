@@ -1,13 +1,19 @@
-
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter_background_geofencing/flutter_background_geofencing.dart';
 
-typedef OfficeExitCallback = Future<void> Function(DateTime eventTime);
+import '../../../../core/geofence_debug.dart';
+import 'native_geofence_service.dart';
+import 'notification_service.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
+typedef OfficeExitCallback = Future<bool> Function(DateTime eventTime);
 
 class OfficeGeofencingService {
-  OfficeGeofencingService();
+  OfficeGeofencingService._internal();
+  static final OfficeGeofencingService instance = OfficeGeofencingService._internal();
+  factory OfficeGeofencingService() => instance;
 
   final GeofencingService _service = GeofencingService();
 
@@ -24,6 +30,14 @@ class OfficeGeofencingService {
   // Use 100 m while testing. A 50 m radius can be unreliable.
   static const double _geofenceRadiusMeters = 100;
 
+  bool get isStarted => _isStarted;
+
+  void resetExitState() {
+    _isHandlingExit = false;
+    _lastHandledExitEvent = null;
+    debugPrint('OfficeGeofencingService: Exit state reset');
+  }
+
   Future<void> start({
     required double latitude,
     required double longitude,
@@ -38,6 +52,12 @@ class OfficeGeofencingService {
 
     try {
       final initialized = await _service.initialize();
+      GeofenceDebug.show(
+        initialized
+            ? '1/5: Geofencing initialized'
+            : 'ERROR: Geofencing initialization failed',
+        isError: !initialized,
+      );
       debugPrint('Geofencing initialized: $initialized');
 
       if (!initialized) {
@@ -45,22 +65,28 @@ class OfficeGeofencingService {
       }
 
       final hasPermissions = await _service.requestPermissions();
+
+      GeofenceDebug.show(
+        hasPermissions
+            ? '2/5: Geofencing permissions granted'
+            : 'ERROR: Geofencing permissions denied',
+        isError: !hasPermissions,
+      );
       debugPrint('Geofencing permissions granted: $hasPermissions');
 
       if (!hasPermissions) {
         throw StateError('Geofencing permissions were not granted.');
       }
 
-      // Subscribe before registering the region.
       await _eventSubscription?.cancel();
 
       _eventSubscription = _service.onGeofenceEvent.listen(
-            (event) {
+        (event) {
           debugPrint(
             'GEOFENCE EVENT: '
-                'type=${event.type}, '
-                'region=${event.regionId}, '
-                'timestamp=${event.timestamp}',
+            'type=${event.type}, '
+            'region=${event.regionId}, '
+            'timestamp=${event.timestamp}',
           );
 
           unawaited(_handleGeofenceEvent(event));
@@ -71,22 +97,6 @@ class OfficeGeofencingService {
         },
       );
 
-      final serviceStarted = await _service.startService(
-        notificationTitle: 'OfficeCheck is active',
-        notificationText: 'Monitoring the office geofence',
-        enableFallbackNotifications: true,
-        fallbackNotificationTitle: 'OfficeCheck location alert',
-        fallbackNotificationBody:
-        'A geofence event occurred near your office.',
-      );
-
-      debugPrint('Geofencing service started: $serviceStarted');
-
-      if (!serviceStarted) {
-        throw StateError('Background geofencing service failed to start.');
-      }
-
-      // Re-register the office region and check the result.
       await _service.removeGeofence(_officeRegionId);
 
       final registered = await _service.addGeofence(
@@ -98,17 +108,59 @@ class OfficeGeofencingService {
           data: {'name': 'Office'},
         ),
       );
+      GeofenceDebug.show(
+        registered
+            ? '3/5: Office geofence registered (100m)'
+            : 'ERROR: Office geofence registration failed',
+        isError: !registered,
+      );
 
       debugPrint(
         'Office geofence registration result: $registered '
-            '(radius: $_geofenceRadiusMeters m)',
+        '(radius: $_geofenceRadiusMeters m)',
       );
 
       if (!registered) {
         throw StateError('Office geofence registration failed.');
       }
 
+      final serviceStarted = await _service.startService(
+        notificationTitle: 'OfficeCheck is active',
+        notificationText: 'Monitoring the office geofence',
+        enableFallbackNotifications: true,
+        fallbackNotificationTitle: 'OfficeCheck location alert',
+        fallbackNotificationBody: 'A geofence event occurred near your office.',
+      );
+
+      GeofenceDebug.show(
+        serviceStarted
+            ? '4/5: Background geofencing service started'
+            : 'ERROR: Background service failed to start',
+        isError: !serviceStarted,
+      );
+
+      debugPrint('Geofencing service started: $serviceStarted');
+
+      if (!serviceStarted) {
+        throw StateError('Background geofencing service failed to start.');
+      }
+
+      try {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString('office_lat', latitude.toString());
+        await prefs.setString('office_lng', longitude.toString());
+      } catch (e) {
+        debugPrint('Failed to save office coordinates: $e');
+      }
+
+      await NativeGeofenceService.registerGeofence(
+        latitude: latitude,
+        longitude: longitude,
+        radiusMeters: _geofenceRadiusMeters,
+      );
+
       _isStarted = true;
+      GeofenceDebug.show('5/5: OfficeCheck geofencing is ACTIVE');
       debugPrint('Office geofencing startup completed.');
     } catch (error, stackTrace) {
       debugPrint('Failed to start office geofencing: $error');
@@ -131,16 +183,17 @@ class OfficeGeofencingService {
 
     switch (event.type) {
       case GeofenceEventType.enter:
-        debugPrint('Office geofence ENTER detected.');
+        GeofenceDebug.show('ENTER: You entered the office area');
+        resetExitState();
         break;
 
       case GeofenceEventType.exit:
-        debugPrint('Office geofence EXIT detected.');
+        GeofenceDebug.show('EXIT: You left the office area');
         await _handleOfficeExit(event);
         break;
 
       default:
-        debugPrint('Other office geofence event: ${event.type}');
+        GeofenceDebug.show('Other geofence event: ${event.type}');
     }
   }
 
@@ -148,41 +201,63 @@ class OfficeGeofencingService {
     final callback = _onOfficeExit;
 
     if (callback == null) {
-      debugPrint(
-        'EXIT RECEIVED, BUT CHECKOUT CALLBACK IS NOT CONFIGURED.',
+      GeofenceDebug.show(
+        'ERROR: Checkout callback is not configured',
+        isError: true,
       );
       return;
     }
 
     if (_isHandlingExit) {
-      debugPrint('Duplicate exit ignored: checkout is in progress.');
+      GeofenceDebug.show('Duplicate EXIT ignored: checkout is processing');
       return;
     }
 
-    if (_lastHandledExitEvent == event.timestamp) {
-      debugPrint('Duplicate exit event ignored.');
+    if (_lastHandledExitEvent != null && _lastHandledExitEvent == event.timestamp) {
+      GeofenceDebug.show('Duplicate EXIT event ignored');
       return;
     }
 
     _isHandlingExit = true;
 
     try {
-      debugPrint('Running automatic checkout callback.');
+      GeofenceDebug.show('Checkout triggered. Processing attendance...');
 
-      await callback(event.timestamp);
+      final success = await callback(event.timestamp)
+          .timeout(const Duration(seconds: 10), onTimeout: () => false);
 
-      _lastHandledExitEvent = event.timestamp;
+      if (success) {
+        _lastHandledExitEvent = event.timestamp;
 
-      debugPrint('Automatic checkout callback returned successfully.');
+        await NotificationService.instance.showAutoCheckoutNotification(
+          event.timestamp,
+        );
+
+        GeofenceDebug.show(
+          'SUCCESS: Automatic checkout saved and notification sent!',
+        );
+      } else {
+        GeofenceDebug.show(
+          'FAILED: No active attendance session or save failed',
+          isError: true,
+        );
+      }
     } catch (error, stackTrace) {
       debugPrint('AUTOMATIC CHECKOUT FAILED: $error');
       debugPrintStack(stackTrace: stackTrace);
+
+      GeofenceDebug.show(
+        'Checkout error: $error',
+        isError: true,
+      );
     } finally {
       _isHandlingExit = false;
     }
   }
 
   Future<void> stop() async {
+    await NativeGeofenceService.removeGeofence();
+
     await _eventSubscription?.cancel();
     _eventSubscription = null;
 

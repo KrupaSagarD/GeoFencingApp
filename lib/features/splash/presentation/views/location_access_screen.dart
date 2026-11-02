@@ -3,6 +3,7 @@ import 'package:geolocator/geolocator.dart';
 import 'package:permission_handler/permission_handler.dart';
 
 import '../../../../core/contants/colors.dart';
+import '../../../../core/geofence_debug.dart';
 import '../../../../core/localization/app_locale.dart';
 import '../../../../l10n/generated/app_localizations.dart';
 import '../../../location/data/services/attendance_service.dart';
@@ -270,14 +271,17 @@ class _LocationAccessScreenState extends State<LocationAccessScreen>
     }
   }
 
-  Future<void> _handleOfficeExit(DateTime eventTime) async {
-    debugPrint(
-      'LocationAccessScreen: geofence exit at $eventTime; auto checkout',
-    );
+  Future<bool> _handleOfficeExit(DateTime eventTime) async {
+    debugPrint(' Office EXIT detected at: $eventTime');
 
     final success = await AttendanceService.autoCheckout(eventTime);
 
-    debugPrint('AttendanceService.autoCheckout result: $success');
+    if (success) {
+      debugPrint(' Automatic checkout completed successfully');
+    } else {
+      debugPrint(' Automatic checkout failed: no active session found');
+    }
+    return success;
   }
 
   Future<void> _continueToHome() async {

@@ -108,7 +108,11 @@ class _HomeScreenState extends State<HomeScreen>
       _onAttendanceChanged,
     );
 
-    unawaited(_initializeHome());
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        unawaited(_initializeHome());
+      }
+    });
 
     // Ensure background geofencing service is active and listening
     if (!OfficeGeofencingService.instance.isStarted && _officeConfigured) {
@@ -364,15 +368,6 @@ class _HomeScreenState extends State<HomeScreen>
       throw Exception(l10n.locationPermissionBlocked);
     }
 
-    // Try last known position first for quick rendering without delay
-    Position? pos = await Geolocator.getLastKnownPosition();
-    // if (pos != null && !pos.isMocked) {
-    //   final lastKnownAge = DateTime.now().difference(pos.timestamp).abs();
-    //   if (lastKnownAge <= const Duration(minutes: 5)) {
-    //     // Return recent cached location immediately
-    //     return pos;
-    //   }
-    // }
 
     final position = await Geolocator.getCurrentPosition(
       locationSettings: const LocationSettings(
@@ -380,11 +375,6 @@ class _HomeScreenState extends State<HomeScreen>
         timeLimit: Duration(seconds: 7),
       ),
     );
-
-    // if (position.isMocked) {
-    //   throw Exception(l10n.mockLocationDetected);
-    // }
-
     return position;
   }
 
